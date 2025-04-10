@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+所有代码的编写，每一行代码后都需要加上通俗易懂的中文注释，通俗到让不懂代码的人也能看懂这行代码的作用的水平
+不要随意改动README文件内容，除非我明确要求改动才可以
+- You can @ files here
+- You can use markdown but dont have to

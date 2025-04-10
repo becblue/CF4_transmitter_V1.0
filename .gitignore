@@ -1,0 +1,32 @@
+# Keil MDK-ARM文件
+*.uvguix.*
+*.uvoptx
+*.o
+*.d
+*.crf
+*.axf
+*.hex
+*.bin
+*.lnp
+*.map
+*.sct
+*.lst
+*.ini
+*.scvd
+*.bak
+
+# 构建文件夹
+MDK-ARM/DebugConfig/
+MDK-ARM/CF4_transmitter_V1.0/
+MDK-ARM/RTE/
+
+# CubeMX生成的备份文件
+*.ioc.bak
+
+# 操作系统临时文件
+Thumbs.db
+.DS_Store
+
+# 编辑器临时文件
+*.swp
+*~ 
