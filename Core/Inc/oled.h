@@ -40,6 +40,11 @@ extern "C" {
 #define DIRTY_BLOCK_NUM  8      // 脏区块数量(每页一个)
 #define DIRTY_BLOCK_SIZE 128    // 脏区块大小(每页128个字节)
 
+/* OLED命令定义 */
+#define OLED_CMD_DISPLAY_ON     0xAF    // 开启显示
+#define OLED_CMD_DISPLAY_OFF    0xAE    // 关闭显示
+#define OLED_CMD_SET_CONTRAST   0x81    // 设置对比度命令
+
 /* 数据结构定义 -----------------------------------------------------------*/
 /**
   * @brief  脏区标记结构体
@@ -54,7 +59,7 @@ typedef struct {
   * @brief  OLED初始化
   * @retval 初始化结果: 0-成功, 1-失败
   */
-uint8_t OLED_Init(void);
+uint8_t OLED_Init(I2C_HandleTypeDef *hi2c);
 
 /**
   * @brief  OLED清屏
@@ -75,7 +80,7 @@ void OLED_Refresh(void);
   * @param  str: 要显示的字符串
   * @retval 无
   */
-void OLED_ShowString(uint8_t x, uint8_t y, char *str);
+void OLED_ShowString(uint8_t x, uint8_t y, const char *str);
 
 /**
   * @brief  OLED显示单个字符
@@ -92,10 +97,9 @@ void OLED_ShowChar(uint8_t x, uint8_t y, char chr);
   * @param  y: 起始页坐标(0-7)
   * @param  num: 要显示的数字
   * @param  len: 数字长度
-  * @param  size: 字体大小(16/12/8)
   * @retval 无
   */
-void OLED_ShowNum(uint8_t x, uint8_t y, uint32_t num, uint8_t len, uint8_t size);
+void OLED_ShowNum(uint8_t x, uint8_t y, uint32_t num, uint8_t len);
 
 /**
   * @brief  OLED显示浮点数
@@ -139,6 +143,12 @@ void OLED_ShowStatus(uint8_t status, uint8_t errorCode);
   * @retval 无
   */
 void OLED_ShowProgress(uint8_t x, uint8_t y, uint8_t max_value, uint8_t value);
+
+void OLED_Display_On(void);
+void OLED_Display_Off(void);
+void OLED_SetPosition(uint8_t x, uint8_t y);
+void OLED_SetContrast(uint8_t contrast);
+void OLED_RefreshGram(void);
 
 #ifdef __cplusplus
 }

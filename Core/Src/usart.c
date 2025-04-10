@@ -20,6 +20,16 @@
 
 /* USER CODE BEGIN 0 */
 
+/* 测试USART1是否正常工作的函数 */
+void USART1_Test(void)
+{
+    char testMsg[] = "USART1 调试输出测试\r\n";  // 测试消息
+    HAL_UART_Transmit(&huart1, (uint8_t *)testMsg, strlen(testMsg), 0xFFFF);  // 直接通过HAL库函数发送测试消息
+    
+    USART1_Printf("USART1_Printf测试: %d\r\n", 123);  // 测试USART1_Printf函数
+    printf("printf重定向测试\r\n");  // 测试printf重定向
+}
+
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -50,7 +60,7 @@ void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
-
+  USART1_Test();  // 在初始化完成后进行测试
   /* USER CODE END USART1_Init 2 */
 
 }
@@ -79,7 +89,6 @@ void MX_USART2_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART2_Init 2 */
-
   /* USER CODE END USART2_Init 2 */
 
 }
@@ -186,5 +195,41 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
+
+#ifdef __GNUC__
+  #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+  #define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+
+/* 重定向printf到USART1 */
+PUTCHAR_PROTOTYPE
+{
+    HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 0xFFFF);  // 通过USART1发送字符
+    return ch;
+}
+
+/* 通过USART1发送调试信息 */
+void USART1_Printf(const char* format, ...)
+{
+    char buf[256];  // 定义缓冲区
+    va_list args;
+    va_start(args, format);
+    vsprintf(buf, format, args);  // 格式化字符串
+    HAL_UART_Transmit(&huart1, (uint8_t *)buf, strlen(buf), 0xFFFF);  // 发送格式化后的字符串
+    va_end(args);
+}
+
+/* 通过USART2发送数据到四氟化碳传感器 */
+HAL_StatusTypeDef USART2_TransmitData(uint8_t *pData, uint16_t Size)
+{
+    return HAL_UART_Transmit(&huart2, pData, Size, 0xFFFF);  // 发送数据到传感器
+}
+
+/* 从四氟化碳传感器接收数据 */
+HAL_StatusTypeDef USART2_ReceiveData(uint8_t *pData, uint16_t Size)
+{
+    return HAL_UART_Receive(&huart2, pData, Size, 0xFFFF);  // 从传感器接收数据
+}
 
 /* USER CODE END 1 */

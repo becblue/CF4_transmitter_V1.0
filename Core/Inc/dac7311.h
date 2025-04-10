@@ -1,12 +1,12 @@
 /**
   ******************************************************************************
   * @file    dac7311.h
-  * @brief   DAC7311ÊýÄ£×ª»»Æ÷Çý¶¯Í·ÎÄ¼þ
+  * @brief   DAC7311æ•°æ¨¡è½¬æ¢å™¨é©±åŠ¨å¤´æ–‡ä»¶
   ******************************************************************************
   * @attention
   *
-  * ±¾ÎÄ¼þ¶¨ÒåÁËÓëDAC7311¿ØÖÆÏà¹ØµÄº¯ÊýºÍºê
-  * DAC7311ÊÇÒ»¸ö12Î»ÊýÄ£×ª»»Æ÷£¬Í¨¹ýSPI½Ó¿Ú¿ØÖÆ
+  * æœ¬æ–‡ä»¶åŒ…å«æ‰€æœ‰DAC7311æŽ§åˆ¶ç›¸å…³çš„å‡½æ•°å’Œå®å®šä¹?
+  * DAC7311æ˜¯ä¸€ä¸?12ä½æ•°æ¨¡è½¬æ¢å™¨ï¼Œé€šè¿‡SPIæŽ¥å£æŽ§åˆ¶
   * 
   ******************************************************************************
   */
@@ -21,47 +21,64 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "spi.h"
+#include "stm32f1xx_hal.h"  // æ·»åŠ HALåº“å¤´æ–‡ä»¶
+#include "stm32f1xx_hal_spi.h"  // æ·»åŠ SPIç›¸å…³å®šä¹‰
 
 /* ºê¶¨Òå --------------------------------------------------------------------*/
-// DAC7311¿ØÖÆ×Ö½Ú¶¨Òå
+// DAC7311µçÔ´Ä£Ê½¶¨Òå
 #define DAC7311_POWER_DOWN_NORMAL     0x00    // Õý³£¹¤×÷Ä£Ê½
-#define DAC7311_POWER_DOWN_1K         0x01    // 1KÏÂÀ­ÖÁµØ
-#define DAC7311_POWER_DOWN_100K       0x02    // 100KÏÂÀ­ÖÁµØ
+#define DAC7311_POWER_DOWN_1K         0x01    // 1KÏÂÀ­¹Ø¶Ï
+#define DAC7311_POWER_DOWN_100K       0x02    // 100KÏÂÀ­¹Ø¶Ï
 #define DAC7311_POWER_DOWN_HI_Z       0x03    // ¸ß×èÌ¬
 
-// DAC7311ÃüÁîÑÚÂë
-#define DAC7311_CMD_MASK              0x30    // ÃüÁîÑÚÂë (Bit 4-5)
-#define DAC7311_PD_MASK               0x0C    // µôµçÄ£Ê½ÑÚÂë (Bit 2-3)
+// DAC7311ÃüÁî¶¨Òå
+#define DAC7311_CMD_WRITE_UPDATE_DAC  0x03    // Ð´Èë²¢¸üÐÂDAC¼Ä´æÆ÷
+#define DAC7311_CMD_MASK              0x03    // ÃüÁîÑÚÂë (Bit 4-5)
+#define DAC7311_PD_MASK               0x0C    // µçÔ´Ä£Ê½ÑÚÂë (Bit 2-3)
 
-/* º¯ÊýÉùÃ÷ ------------------------------------------------------------------*/
+// ¼æÈÝÐÔ¶¨Òå
+#define DAC7311_POWER_NORMAL          DAC7311_POWER_DOWN_NORMAL  // ¼æÈÝ¾É´úÂë
+
+/* å‡½æ•°å£°æ˜Ž ------------------------------------------------------------------*/
 /**
-  * @brief  DAC7311³õÊ¼»¯
-  * @retval ³õÊ¼»¯½á¹û: 0-³É¹¦, 1-Ê§°Ü
+  * @brief  DAC7311åˆå§‹åŒ?
+  * @param  hspi: SPIé€šä¿¡å¥æŸ„æŒ‡é’ˆ
+  * @param  cs_port: ç‰‡é€‰å¼•è„šæ‰€åœ¨çš„GPIOç«¯å£
+  * @param  cs_pin: ç‰‡é€‰å¼•è„šç¼–å?
+  * @retval åˆå§‹åŒ–ç»“æž?: 0-æˆåŠŸ, 1-å¤±è´¥
   */
-uint8_t DAC7311_Init(void);
+uint8_t DAC7311_Init(SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin);
 
 /**
-  * @brief  ÉèÖÃDACÊä³öÖµ
-  * @param  value: 12Î»DACÊä³öÖµ(0-4095)
-  * @retval ÉèÖÃ½á¹û: 0-³É¹¦, 1-Ê§°Ü
+  * @brief  è®¾ç½®DACè¾“å‡ºå€?
+  * @param  value: 12ä½DACæ•°å€?(0-4095)
+  * @retval è®¾ç½®ç»“æžœ: 0-æˆåŠŸ, 1-å¤±è´¥
   */
 uint8_t DAC7311_SetValue(uint16_t value);
 
 /**
-  * @brief  ÉèÖÃDACµçÔ´Ä£Ê½
-  * @param  mode: µçÔ´Ä£Ê½
-  *               DAC7311_POWER_DOWN_NORMAL: Õý³£¹¤×÷Ä£Ê½
-  *               DAC7311_POWER_DOWN_1K: 1KÏÂÀ­ÖÁµØ
-  *               DAC7311_POWER_DOWN_100K: 100KÏÂÀ­ÖÁµØ
-  *               DAC7311_POWER_DOWN_HI_Z: ¸ß×èÌ¬
-  * @retval ÉèÖÃ½á¹û: 0-³É¹¦, 1-Ê§°Ü
+  * @brief  è®¾ç½®DACç”µæºæ¨¡å¼
+  * @param  mode: ç”µæºæ¨¡å¼
+  *               DAC7311_POWER_DOWN_NORMAL: æ­£å¸¸å·¥ä½œæ¨¡å¼
+  *               DAC7311_POWER_DOWN_1K: 1Kä¸‹æ‹‰å…³æ–­
+  *               DAC7311_POWER_DOWN_100K: 100Kä¸‹æ‹‰å…³æ–­
+  *               DAC7311_POWER_DOWN_HI_Z: é«˜é˜»æ€?
+  * @retval è®¾ç½®ç»“æžœ: 0-æˆåŠŸ, 1-å¤±è´¥
   */
-uint8_t DAC7311_SetPowerMode(uint16_t mode);
+uint8_t DAC7311_SetPowerMode(uint8_t mode);
+
+/**
+  * @brief  è®¾ç½®DACè¾“å‡ºç”µåŽ‹
+  * @param  voltage: æœŸæœ›è¾“å‡ºç”µåŽ‹(å•ä½:ä¼ç‰¹)
+  * @param  vref: å‚è€ƒç”µåŽ?(å•ä½:ä¼ç‰¹)
+  * @retval è®¾ç½®ç»“æžœ: 0-æˆåŠŸ, 1-å¤±è´¥
+  */
+uint8_t DAC7311_SetVoltage(float voltage, float vref);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __DAC7311_H */ 
+#endif /* __DAC7311_H */
+
 
