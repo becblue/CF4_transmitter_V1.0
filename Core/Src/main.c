@@ -40,7 +40,7 @@
 /* USER CODE BEGIN PD */
 #define SENSOR_UPDATE_INTERVAL   500       // 传感器数据更新间隔(ms)
 #define DISPLAY_UPDATE_INTERVAL  1000      // 显示更新间隔(ms)
-#define WARMUP_TIME              60000     // 预热时间(ms)
+#define WARMUP_TIME              3000      // 预热时间(ms)
 /* USER CODE END PD */
 
 /* 私有宏 -------------------------------------------------------------*/
@@ -151,11 +151,13 @@ int main(void)
   }
   
   // 系统预热
-  uint8_t warmupSeconds = 60; // 预热时间60秒
+  uint8_t warmupSeconds = 3; // 预热时间3秒
   for (uint8_t i = 0; i < warmupSeconds; i++) {
     OLED_Clear();
     OLED_ShowString(0, 0, "System Warming Up");
-    OLED_ShowProgress(0, 2, warmupSeconds, i+1);
+    char timeStr[16];
+    sprintf(timeStr, "Wait %ds", warmupSeconds - i);  // 显示剩余秒数
+    OLED_ShowString(0, 2, timeStr);
     OLED_Refresh();
     HAL_Delay(1000); // 延时1秒
   }
@@ -172,13 +174,51 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
-    HAL_Delay(1000);  // 每秒发送一次心跳信息
-    printf("系统运行中...\r\n");
+    // 1. 传感器数据采集流程
+    SensorData_t sensorData;  // 创建传感器数据结构体
+    if (Sensor_UpdateAllData(&sensorData) == 0)  // 更新所有传感器数据
+    {
+      // 2. 数据处理与显示流程
+      // 在OLED上显示数据
+      OLED_Clear();  // 清屏
+      
+      // 显示浓度值
+      char buf[32];
+      sprintf(buf, "浓度: %d", sensorData.concentration);
+      OLED_ShowString(0, 0, buf);
+      
+      // 显示输出电压
+      sprintf(buf, "电压: %.2fV", sensorData.outputVoltage);
+      OLED_ShowString(0, 2, buf);
+      
+      // 显示输出电流
+      sprintf(buf, "电流: %.2fmA", sensorData.outputCurrent);
+      OLED_ShowString(0, 4, buf);
+      
+      // 3. 调试信息输出
+      printf("传感器数据更新：\r\n");
+      printf("浓度: %d\r\n", sensorData.concentration);
+      printf("输出值: %d\r\n", sensorData.outputValue);
+      printf("电压: %.2fV\r\n", sensorData.outputVoltage);
+      printf("电流: %.2fmA\r\n", sensorData.outputCurrent);
+    }
+    else
+    {
+      // 数据更新失败，显示错误信息
+      printf("错误：%s\r\n", Sensor_GetErrorString(Sensor_GetLastError()));
+      
+      // 在OLED上显示错误信息
+      OLED_Clear();
+      OLED_ShowString(0, 0, "数据更新失败");
+      OLED_ShowString(0, 2, Sensor_GetErrorString(Sensor_GetLastError()));
+    }
+    
+    HAL_Delay(1000);  // 每秒更新一次数据
+    
+    /* USER CODE END 3 */
   }
-  /* USER CODE END 3 */
+  /* USER CODE END WHILE */
 }
 
 /**

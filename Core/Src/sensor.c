@@ -6,7 +6,7 @@
   * @attention
   *
   * 本文件实现了与CF4气体传感器通信的功能
-  * 通过USART1与传感器进行通信，获取浓度、量程和零点数据
+  * 通过USART2与传感器进行通信，获取浓度、量程和零点数据
   * 并根据这些数据计算输出值、电压和电流
   *
   ******************************************************************************
@@ -22,6 +22,18 @@
 /* 私有宏定义 ----------------------------------------------------------------*/
 #define SENSOR_MAX_RETRY           3       // 最大重试次数
 #define SENSOR_RETRY_DELAY         50      // 重试延时(ms)
+
+/* 帧格式定义 */
+#define SENSOR_TX_HEADER          0xAA    // 发送帧头 0xAA
+#define SENSOR_TX_END            0xBB    // 发送帧尾 0xBB
+#define SENSOR_RX_HEADER          0x55    // 接收帧头 0x55
+#define SENSOR_RX_END            0xAA    // 接收帧尾 0xAA
+#define SENSOR_ADDR              0x00    // 传感器默认地址 0x00
+
+/* 命令定义 */
+#define SENSOR_CMD_READ_CONC     0x03    // 读取浓度命令
+#define SENSOR_CMD_READ_RANGE    0x04    // 读取量程命令
+#define SENSOR_CMD_READ_ZERO     0x05    // 读取零点命令
 
 /* 错误代码定义 */
 #define SENSOR_ERROR_NONE          0x00    // 无错误
@@ -343,29 +355,85 @@ uint8_t Sensor_GetLastError(void)
   */
 static uint8_t Sensor_SendCommand(uint8_t cmd)
 {
-  uint8_t txBuffer[5];  // 命令帧缓冲区
+  uint8_t txBuffer[10];  // 发送帧缓冲区（10字节）
+  uint8_t rxBuffer[10];  // 接收帧缓冲区（10字节）
+  uint8_t checksum = 0;  // 校验和
   
-  // 构建命令帧
-  txBuffer[0] = SENSOR_FRAME_HEADER;  // 帧头
-  txBuffer[1] = cmd;                  // 命令字
-  txBuffer[2] = 0x00;                 // 数据字节 (无数据)
-  txBuffer[3] = Sensor_CalculateChecksum(txBuffer, 3);  // 校验和
-  txBuffer[4] = SENSOR_FRAME_END;     // 帧尾
+  // 构建发送帧
+  txBuffer[0] = SENSOR_TX_HEADER;  // 帧头 0xAA
+  txBuffer[1] = SENSOR_ADDR;       // 设备地址 0x00
+  txBuffer[2] = cmd;               // 命令字
+  txBuffer[3] = 0x00;             // 命令内容（5字节）
+  txBuffer[4] = 0x00;
+  txBuffer[5] = 0x00;
+  txBuffer[6] = 0x00;
+  txBuffer[7] = 0x00;
+  
+  // 计算校验和（Byte0~Byte7的和取反加1）
+  for(uint8_t i = 0; i < 8; i++) {
+    checksum += txBuffer[i];
+  }
+  txBuffer[8] = (~checksum) + 1;   // 校验和
+  txBuffer[9] = SENSOR_TX_END;     // 帧尾 0xBB
+  
+  // 打印发送的数据内容
+  printf("发送数据: ");
+  for(uint8_t i = 0; i < 10; i++) {
+    printf("0x%02X ", txBuffer[i]);
+  }
+  printf("\r\n");
   
   // 清空接收缓冲区
-  memset(rxBuffer, 0, SENSOR_BUFFER_SIZE);  // 清除上次接收的数据
+  memset(rxBuffer, 0, sizeof(rxBuffer));
   
   // 发送命令帧
-  if (HAL_UART_Transmit(&huart1, txBuffer, 5, SENSOR_TIMEOUT) != HAL_OK) {
-    lastError = SENSOR_ERROR_TIMEOUT;  // 设置超时错误
-    return 1;  // 发送失败
+  if (HAL_UART_Transmit(&huart2, txBuffer, 10, SENSOR_TIMEOUT) != HAL_OK) {
+    lastError = SENSOR_ERROR_TIMEOUT;
+    printf("发送失败！\r\n");
+    return 1;
   }
   
   // 接收响应数据
-  if (HAL_UART_Receive(&huart1, rxBuffer, 7, SENSOR_TIMEOUT) != HAL_OK) {
-    lastError = SENSOR_ERROR_TIMEOUT;  // 设置超时错误
-    return 1;  // 接收失败
+  if (HAL_UART_Receive(&huart2, rxBuffer, 10, SENSOR_TIMEOUT) != HAL_OK) {
+    lastError = SENSOR_ERROR_TIMEOUT;
+    printf("接收超时！\r\n");
+    return 1;
   }
+  
+  // 打印接收到的数据内容
+  printf("接收数据: ");
+  for(uint8_t i = 0; i < 10; i++) {
+    printf("0x%02X ", rxBuffer[i]);
+  }
+  printf("\r\n");
+  
+  // 验证接收帧格式
+  if (rxBuffer[0] != SENSOR_RX_HEADER || rxBuffer[9] != SENSOR_RX_END) {
+    lastError = SENSOR_ERROR_FRAME;
+    printf("帧格式错误！\r\n");
+    return 1;
+  }
+  
+  // 验证命令字
+  if (rxBuffer[1] != cmd) {
+    lastError = SENSOR_ERROR_FRAME;
+    printf("命令不匹配！\r\n");
+    return 1;
+  }
+  
+  // 计算并验证校验和
+  checksum = 0;
+  for(uint8_t i = 0; i < 8; i++) {
+    checksum += rxBuffer[i];
+  }
+  if (rxBuffer[8] != ((~checksum) + 1)) {
+    lastError = SENSOR_ERROR_CHECKSUM;
+    printf("校验和错误！\r\n");
+    return 1;
+  }
+  
+  // 复制接收到的数据到全局缓冲区
+  memcpy(rxBuffer, rxBuffer, sizeof(rxBuffer));
   
   return 0;  // 发送成功
 }
@@ -376,20 +444,15 @@ static uint8_t Sensor_SendCommand(uint8_t cmd)
   */
 static uint16_t Sensor_ParseResponse(void)
 {
-  // 检查帧头和帧尾
-  if (rxBuffer[0] != SENSOR_FRAME_HEADER || rxBuffer[6] != SENSOR_FRAME_END) {
-    lastError = SENSOR_ERROR_FRAME;  // 设置帧格式错误
-    return 0xFFFF;  // 帧格式错误
-  }
+  // 提取数据（根据具体命令解析Byte3~Byte6中的数据）
+  uint16_t value = (rxBuffer[3] << 8) | rxBuffer[4];  // 假设数据在Byte3和Byte4中
   
-  // 验证校验和
-  if (!Sensor_VerifyChecksum(rxBuffer, 5)) {
-    lastError = SENSOR_ERROR_CHECKSUM;  // 设置校验和错误
-    return 0xFFFF;  // 校验和错误
+  // 检查状态字节（Byte7）
+  if (rxBuffer[7] != 0x00) {  // 假设0x00表示正常状态
+    lastError = SENSOR_ERROR_VALUE;
+    printf("传感器状态异常：0x%02X\r\n", rxBuffer[7]);
+    return 0xFFFF;
   }
-  
-  // 提取数据
-  uint16_t value = (rxBuffer[3] << 8) | rxBuffer[4];  // 组合高低字节为16位数据
   
   return value;  // 返回解析出的数据
 }
