@@ -2,20 +2,20 @@
 /**
   ******************************************************************************
   * @file    usart.h
-  * @brief   ´ËÎÄ¼þ°üº¬usart.cÎÄ¼þµÄËùÓÐº¯ÊýÔ­ÐÍ
+  * @brief   ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½usart.cï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðºï¿½ï¿½ï¿½Ô­ï¿½ï¿½
   ******************************************************************************
   * @attention
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
-  * ±¾Èí¼þÊ¹ÓÃµÄÐí¿ÉÌõ¿î¿ÉÔÚ±¾Èí¼þ×é¼þµÄ¸ùÄ¿Â¼ÖÐµÄLICENSEÎÄ¼þÖÐÕÒµ½¡£
-  * Èç¹ûÃ»ÓÐËæ±¾Èí¼þÌá¹©LICENSEÎÄ¼þ£¬Ôò°´"Ô­Ñù"Ìá¹©¡£
+  * ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½Ä¿Â¼ï¿½Ðµï¿½LICENSEï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½
+  * ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½ï¿½ï¿½á¹©LICENSEï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½"Ô­ï¿½ï¿½"ï¿½á¹©ï¿½ï¿½
   *
   ******************************************************************************
   */
 /* USER CODE END Header */
-/* ·ÀÖ¹µÝ¹é°üº¬µÄ¶¨Òå -------------------------------------*/
+/* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __USART_H__
 #define __USART_H__
 
@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-/* °üº¬ÎÄ¼þ ------------------------------------------------------------------*/
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
@@ -32,23 +32,24 @@ extern "C" {
 #include <string.h>
 /* USER CODE END Includes */
 
-extern UART_HandleTypeDef huart1;  // USART1¾ä±ú£¬ÓÃÓÚµ÷ÊÔÊä³ö
-extern UART_HandleTypeDef huart2;  // USART2¾ä±ú£¬ÓÃÓÚ´«¸ÐÆ÷Í¨ÐÅ
+extern UART_HandleTypeDef huart1;
+
+extern UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
-void MX_USART1_UART_Init(void);  // USART1³õÊ¼»¯º¯Êý
-void MX_USART2_UART_Init(void);  // USART2³õÊ¼»¯º¯Êý
+void MX_USART1_UART_Init(void);
+void MX_USART2_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
-/* µ÷ÊÔÊä³öÏà¹Øº¯Êý */
-void USART1_Printf(const char* format, ...);  // Í¨¹ýUSART1·¢ËÍ¸ñÊ½»¯µ÷ÊÔÐÅÏ¢
+/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øºï¿½ï¿½ï¿½ */
+void USART1_Printf(const char* format, ...);  // Í¨ï¿½ï¿½USART1ï¿½ï¿½ï¿½Í¸ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
 
-/* ËÄ·ú»¯Ì¼´«¸ÐÆ÷Í¨ÐÅÏà¹Øº¯Êý */
-HAL_StatusTypeDef USART2_TransmitData(uint8_t *pData, uint16_t Size);  // ·¢ËÍÊý¾Ýµ½´«¸ÐÆ÷
-HAL_StatusTypeDef USART2_ReceiveData(uint8_t *pData, uint16_t Size);   // ´Ó´«¸ÐÆ÷½ÓÊÕÊý¾Ý
+/* ï¿½Ä·ï¿½ï¿½ï¿½Ì¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½Øºï¿½ï¿½ï¿½ */
+HAL_StatusTypeDef USART2_TransmitData(uint8_t *pData, uint16_t Size);  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ýµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+HAL_StatusTypeDef USART2_ReceiveData(uint8_t *pData, uint16_t Size);   // ï¿½Ó´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

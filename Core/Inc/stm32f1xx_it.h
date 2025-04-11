@@ -2,21 +2,21 @@
 /**
   ******************************************************************************
   * @file    stm32f1xx_it.h
-  * @brief   此文件包含中断处理程序的头文件
+  * @brief   锟斤拷锟侥硷拷锟斤拷锟斤拷锟叫断达拷锟斤拷锟斤拷锟斤拷头锟侥硷拷
   ******************************************************************************
   * @attention
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
-  * 本软件使用的许可条款可在本软件组件的根目录中的LICENSE文件中找到。
-  * 如果没有随本软件提供LICENSE文件，则按"原样"提供。
+  * 锟斤拷锟斤拷锟绞癸拷玫锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷诒锟斤拷锟斤拷锟斤拷锟斤拷母锟侥柯硷拷械锟絃ICENSE锟侥硷拷锟斤拷锟揭碉拷锟斤拷
+  * 锟斤拷锟矫伙拷锟斤拷姹撅拷锟斤拷锟结供LICENSE锟侥硷拷锟斤拷锟斤拷"原锟斤拷"锟结供锟斤拷
   *
   ******************************************************************************
   */
 /* USER CODE END Header */
 
-/* 防止递归包含的定义 -------------------------------------*/
+/* Define to prevent recursive inclusion -------------------------------------*/
 #ifndef __STM32F1xx_IT_H
 #define __STM32F1xx_IT_H
 
@@ -24,27 +24,27 @@
  extern "C" {
 #endif
 
-/* 私有包含文件 ----------------------------------------------------------*/
+/* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
 /* USER CODE END Includes */
 
-/* 导出类型定义 ------------------------------------------------------------*/
+/* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
 
 /* USER CODE END ET */
 
-/* 导出常量 --------------------------------------------------------*/
+/* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
 
 /* USER CODE END EC */
 
-/* 导出宏 ------------------------------------------------------------*/
+/* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
 /* USER CODE END EM */
 
-/* 导出函数原型 ---------------------------------------------*/
+/* Exported functions prototypes ---------------------------------------------*/
 void NMI_Handler(void);
 void HardFault_Handler(void);
 void MemManage_Handler(void);
@@ -54,6 +54,10 @@ void SVC_Handler(void);
 void DebugMon_Handler(void);
 void PendSV_Handler(void);
 void SysTick_Handler(void);
+void I2C1_EV_IRQHandler(void);
+void I2C1_ER_IRQHandler(void);
+void USART1_IRQHandler(void);
+void USART2_IRQHandler(void);
 /* USER CODE BEGIN EFP */
 
 /* USER CODE END EFP */

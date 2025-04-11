@@ -2,20 +2,20 @@
 /**
   ******************************************************************************
   * @file    i2c.c
-  * @brief   ´ËÎÄ¼þÌá¹©I2CÊµÀýµÄÅäÖÃ´úÂë
+  * @brief   ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½á¹©I2CÊµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½
   ******************************************************************************
   * @attention
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
-  * ±¾Èí¼þÊ¹ÓÃµÄÐí¿ÉÌõ¿î¿ÉÔÚ±¾Èí¼þ×é¼þµÄ¸ùÄ¿Â¼ÖÐµÄLICENSEÎÄ¼þÖÐÕÒµ½¡£
-  * Èç¹ûÃ»ÓÐËæ±¾Èí¼þÌá¹©LICENSEÎÄ¼þ£¬Ôò°´"Ô­Ñù"Ìá¹©¡£
+  * ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½Ä¿Â¼ï¿½Ðµï¿½LICENSEï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½
+  * ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½ï¿½ï¿½á¹©LICENSEï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½"Ô­ï¿½ï¿½"ï¿½á¹©ï¿½ï¿½
   *
   ******************************************************************************
   */
 /* USER CODE END Header */
-/* °üº¬ÎÄ¼þ ------------------------------------------------------------------*/
+/* Includes ------------------------------------------------------------------*/
 #include "i2c.h"
 
 /* USER CODE BEGIN 0 */
@@ -24,7 +24,7 @@
 
 I2C_HandleTypeDef hi2c1;
 
-/* I2C1³õÊ¼»¯º¯Êý */
+/* I2C1 init function */
 void MX_I2C1_Init(void)
 {
 
@@ -36,7 +36,7 @@ void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 50000;
+  hi2c1.Init.ClockSpeed = 100000;
   hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
@@ -52,6 +52,12 @@ void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 2 */
 
+  /* I2C1 interrupt Init */
+  HAL_NVIC_SetPriority(I2C1_EV_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
+  
+  HAL_NVIC_SetPriority(I2C1_ER_IRQn, 2, 1);
+  HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
@@ -65,7 +71,7 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
   /* USER CODE END I2C1_MspInit 0 */
 
     __HAL_RCC_GPIOB_CLK_ENABLE();
-    /**I2C1 GPIOÅäÖÃ
+    /**I2C1 GPIO Configuration
     PB6     ------> I2C1_SCL
     PB7     ------> I2C1_SDA
     */
@@ -74,8 +80,14 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* I2C1Ê±ÖÓÊ¹ÄÜ */
+    /* I2C1 clock enable */
     __HAL_RCC_I2C1_CLK_ENABLE();
+
+    /* I2C1 interrupt Init */
+    HAL_NVIC_SetPriority(I2C1_EV_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
+    HAL_NVIC_SetPriority(I2C1_ER_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
   /* USER CODE BEGIN I2C1_MspInit 1 */
 
   /* USER CODE END I2C1_MspInit 1 */
@@ -90,10 +102,10 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
   /* USER CODE BEGIN I2C1_MspDeInit 0 */
 
   /* USER CODE END I2C1_MspDeInit 0 */
-    /* ÍâÉèÊ±ÖÓ½ûÓÃ */
+    /* Peripheral clock disable */
     __HAL_RCC_I2C1_CLK_DISABLE();
 
-    /**I2C1 GPIOÅäÖÃ
+    /**I2C1 GPIO Configuration
     PB6     ------> I2C1_SCL
     PB7     ------> I2C1_SDA
     */
@@ -101,6 +113,9 @@ void HAL_I2C_MspDeInit(I2C_HandleTypeDef* i2cHandle)
 
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_7);
 
+    /* I2C1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(I2C1_EV_IRQn);
+    HAL_NVIC_DisableIRQ(I2C1_ER_IRQn);
   /* USER CODE BEGIN I2C1_MspDeInit 1 */
 
   /* USER CODE END I2C1_MspDeInit 1 */

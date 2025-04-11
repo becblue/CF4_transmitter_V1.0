@@ -60,3 +60,12 @@
     "usart.h": "c"
   }
 }
+
+{
+  "remote.extensionKind": {
+    "ms-vscode.cpptools": "ui"
+  },
+  "vsCode.enableProposedApi": true,
+  "C_Cpp.legacyCompilerArgsBehavior": true,  // 规避新版本参数限制
+  "extensions.ignoreRecommendations": true    // 禁用微软扩展推荐
+}

@@ -41,6 +41,19 @@
 #define SENSOR_ERROR_CHECKSUM      0x02    // 校验和错误
 #define SENSOR_ERROR_FRAME         0x03    // 帧格式错误
 #define SENSOR_ERROR_VALUE         0x04    // 数据值错误
+#define SENSOR_ERROR_TRANSMIT      0x05    // 发送错误
+#define SENSOR_ERROR_RECEIVE       0x06    // 接收错误
+#define SENSOR_ERROR_FORMAT        0x07    // 帧格式错误
+#define SENSOR_ERROR_CMD           0x08    // 命令不匹配
+#define SENSOR_ERROR_STATUS        0x09    // 状态异常
+#define SENSOR_ERROR_EXECUTE       0x0A    // 命令执行错误
+#define SENSOR_ERROR_NO_ZERO       0x0B    // 无零点信息
+#define SENSOR_ERROR_RESPONSE      0x0C    // 未知响应状态
+#define SENSOR_ERROR_NOT_CALIBRATED 0x0D    // 传感器未标定
+#define SENSOR_ERROR_ZERO_SHIFTING 0x0E    // 传感器零点平移中
+#define SENSOR_ERROR_CALIBRATING   0x0F    // 传感器标定过程中
+#define SENSOR_ERROR_FAULT         0x10    // 传感器故障
+#define SENSOR_ERROR_UNKNOWN_STATUS 0x11   // 未知传感器状态
 
 /* 私有变量 ------------------------------------------------------------------*/
 static uint8_t rxBuffer[SENSOR_BUFFER_SIZE];  // 接收缓冲区
@@ -49,11 +62,10 @@ static uint8_t isInitialized = 0;             // 初始化标志
 static uint8_t lastError = SENSOR_ERROR_NONE; // 最后一次错误代码
 
 /* 私有函数原型 --------------------------------------------------------------*/
-static uint8_t Sensor_SendCommand(uint8_t cmd);
-static uint16_t Sensor_ParseResponse(void);
-static uint8_t Sensor_VerifyChecksum(uint8_t *data, uint8_t length);
+static uint8_t Sensor_SendCommand(uint8_t cmd, uint8_t *data, uint8_t dataLen);
+static uint32_t Sensor_ParseResponse(void);
 static uint8_t Sensor_CalculateChecksum(uint8_t *data, uint8_t length);
-static uint8_t Sensor_IsValueValid(uint16_t value, uint8_t cmd);
+static uint8_t Sensor_IsValueValid(uint32_t value, uint8_t cmd);
 
 /* 函数实现 ------------------------------------------------------------------*/
 
@@ -75,18 +87,12 @@ uint8_t Sensor_Init(void)
   // 尝试获取传感器零点值和量程值
   uint16_t zeroPoint = Sensor_GetZeroPoint();  // 获取零点值
   HAL_Delay(100);  // 短暂延时，避免连续通信
-  uint16_t rangeValue = Sensor_GetRange();  // 获取量程值
+  uint32_t rangeValue = Sensor_GetRange();  // 获取量程值
   
-  // 检查获取值是否有效
-  if (zeroPoint == 0xFFFF || rangeValue == 0xFFFF) {
-    return 1;  // 初始化失败，无法获取基本参数
-  }
-  
-  // 输出初始值检查
-  if (rangeValue <= zeroPoint) {
-    // 量程值必须大于零点值
+  // 检查量程值是否有效
+  if (rangeValue == 0) {  // 只有0是无效值
     lastError = SENSOR_ERROR_VALUE;  // 记录参数错误
-    return 1;  // 参数异常
+    return 1;  // 初始化失败，量程值无效
   }
   
   // 更新传感器数据结构体
@@ -115,7 +121,7 @@ uint16_t Sensor_GetConcentration(void)
   // 使用重试机制读取浓度值
   while (retry < SENSOR_MAX_RETRY) {
     // 发送读取浓度命令
-    if (Sensor_SendCommand(SENSOR_CMD_READ_CONC) == 0) {
+    if (Sensor_SendCommand(SENSOR_CMD_READ_CONC, NULL, 0) == 0) {
       // 解析响应数据
       concentration = Sensor_ParseResponse();
       
@@ -138,22 +144,22 @@ uint16_t Sensor_GetConcentration(void)
 
 /**
   * @brief  获取传感器量程值
-  * @retval 量程值，失败则返回0xFFFF
+  * @retval 量程值，失败则返回0xFFFFFFFF
   */
-uint16_t Sensor_GetRange(void)
+uint32_t Sensor_GetRange(void)
 {
   uint8_t retry = 0;  // 重试计数器
-  uint16_t rangeValue;  // 量程值
+  uint32_t rangeValue;  // 量程值（32位）
   
   // 使用重试机制读取量程值
   while (retry < SENSOR_MAX_RETRY) {
     // 发送读取量程命令
-    if (Sensor_SendCommand(SENSOR_CMD_READ_RANGE) == 0) {
+    if (Sensor_SendCommand(SENSOR_CMD_READ_RANGE, NULL, 0) == 0) {
       // 解析响应数据
       rangeValue = Sensor_ParseResponse();
       
-      // 检查数据有效性
-      if (rangeValue != 0xFFFF && Sensor_IsValueValid(rangeValue, SENSOR_CMD_READ_RANGE)) {
+      // 检查数据有效性（只要不是0就是有效的）
+      if (Sensor_IsValueValid(rangeValue, SENSOR_CMD_READ_RANGE)) {
         // 更新传感器数据结构体
         sensorData.rangeValue = rangeValue;
         lastError = SENSOR_ERROR_NONE;  // 清除错误状态
@@ -166,7 +172,7 @@ uint16_t Sensor_GetRange(void)
   }
   
   // 全部重试失败，返回错误值
-  return 0xFFFF;  // 读取失败
+  return 0xFFFFFFFF;  // 读取失败
 }
 
 /**
@@ -181,7 +187,7 @@ uint16_t Sensor_GetZeroPoint(void)
   // 使用重试机制读取零点值
   while (retry < SENSOR_MAX_RETRY) {
     // 发送读取零点命令
-    if (Sensor_SendCommand(SENSOR_CMD_READ_ZERO) == 0) {
+    if (Sensor_SendCommand(SENSOR_CMD_READ_ZERO, NULL, 0) == 0) {
       // 解析响应数据
       zeroPoint = Sensor_ParseResponse();
       
@@ -209,7 +215,7 @@ uint16_t Sensor_GetZeroPoint(void)
   * @param  rangeValue: 量程值
   * @retval 输出值(0-4095)
   */
-uint16_t Sensor_CalculateOutput(uint16_t concentration, uint16_t zeroPoint, uint16_t rangeValue)
+uint16_t Sensor_CalculateOutput(uint16_t concentration, uint16_t zeroPoint, uint32_t rangeValue)
 {
   // 防止除零错误
   if (rangeValue <= zeroPoint) {
@@ -229,13 +235,19 @@ uint16_t Sensor_CalculateOutput(uint16_t concentration, uint16_t zeroPoint, uint
   }
   // 否则线性映射
   else {
-    // 使用32位计算避免溢出
-    output = (uint32_t)(concentration - zeroPoint) * 4095 / (rangeValue - zeroPoint);
+    // 使用64位计算避免溢出，并提高精度
+    uint64_t temp = (uint64_t)(concentration - zeroPoint) * 4096;  // 使用4096提高精度
+    output = (uint32_t)((temp + ((rangeValue - zeroPoint) >> 1)) / (rangeValue - zeroPoint));  // 加上半个除数实现四舍五入
+    
     // 确保输出值在有效范围内
     if (output > 4095) {
       output = 4095;  // 限制最大输出值
     }
   }
+  
+  // 打印调试信息
+  printf("[调试] 计算输出值: 浓度=%u, 零点=%u, 量程=%u, 输出值=%u\r\n", 
+         concentration, zeroPoint, (uint32_t)rangeValue, output);
   
   return (uint16_t)output;  // 返回计算后的输出值
 }
@@ -351,122 +363,165 @@ uint8_t Sensor_GetLastError(void)
 /**
   * @brief  发送命令到传感器
   * @param  cmd: 命令字节
+  * @param  data: 数据缓冲区
+  * @param  dataLen: 数据长度
   * @retval 发送结果: 0-成功, 1-失败
   */
-static uint8_t Sensor_SendCommand(uint8_t cmd)
+static uint8_t Sensor_SendCommand(uint8_t cmd, uint8_t *data, uint8_t dataLen)
 {
-  uint8_t txBuffer[10];  // 发送帧缓冲区（10字节）
-  uint8_t rxBuffer[10];  // 接收帧缓冲区（10字节）
-  uint8_t checksum = 0;  // 校验和
-  
-  // 构建发送帧
-  txBuffer[0] = SENSOR_TX_HEADER;  // 帧头 0xAA
-  txBuffer[1] = SENSOR_ADDR;       // 设备地址 0x00
-  txBuffer[2] = cmd;               // 命令字
-  txBuffer[3] = 0x00;             // 命令内容（5字节）
-  txBuffer[4] = 0x00;
-  txBuffer[5] = 0x00;
-  txBuffer[6] = 0x00;
-  txBuffer[7] = 0x00;
-  
-  // 计算校验和（Byte0~Byte7的和取反加1）
-  for(uint8_t i = 0; i < 8; i++) {
-    checksum += txBuffer[i];
-  }
-  txBuffer[8] = (~checksum) + 1;   // 校验和
-  txBuffer[9] = SENSOR_TX_END;     // 帧尾 0xBB
-  
-  // 打印发送的数据内容
-  printf("发送数据: ");
-  for(uint8_t i = 0; i < 10; i++) {
-    printf("0x%02X ", txBuffer[i]);
-  }
-  printf("\r\n");
-  
-  // 清空接收缓冲区
-  memset(rxBuffer, 0, sizeof(rxBuffer));
-  
-  // 发送命令帧
-  if (HAL_UART_Transmit(&huart2, txBuffer, 10, SENSOR_TIMEOUT) != HAL_OK) {
-    lastError = SENSOR_ERROR_TIMEOUT;
-    printf("发送失败！\r\n");
-    return 1;
-  }
-  
-  // 接收响应数据
-  if (HAL_UART_Receive(&huart2, rxBuffer, 10, SENSOR_TIMEOUT) != HAL_OK) {
-    lastError = SENSOR_ERROR_TIMEOUT;
-    printf("接收超时！\r\n");
-    return 1;
-  }
-  
-  // 打印接收到的数据内容
-  printf("接收数据: ");
-  for(uint8_t i = 0; i < 10; i++) {
-    printf("0x%02X ", rxBuffer[i]);
-  }
-  printf("\r\n");
-  
-  // 验证接收帧格式
-  if (rxBuffer[0] != SENSOR_RX_HEADER || rxBuffer[9] != SENSOR_RX_END) {
-    lastError = SENSOR_ERROR_FRAME;
-    printf("帧格式错误！\r\n");
-    return 1;
-  }
-  
-  // 验证命令字
-  if (rxBuffer[1] != cmd) {
-    lastError = SENSOR_ERROR_FRAME;
-    printf("命令不匹配！\r\n");
-    return 1;
-  }
-  
-  // 计算并验证校验和
-  checksum = 0;
-  for(uint8_t i = 0; i < 8; i++) {
-    checksum += rxBuffer[i];
-  }
-  if (rxBuffer[8] != ((~checksum) + 1)) {
-    lastError = SENSOR_ERROR_CHECKSUM;
-    printf("校验和错误！\r\n");
-    return 1;
-  }
-  
-  // 复制接收到的数据到全局缓冲区
-  memcpy(rxBuffer, rxBuffer, sizeof(rxBuffer));
-  
-  return 0;  // 发送成功
+    uint8_t txBuffer[10];  // 发送缓冲区，仅保留发送缓冲区
+    
+    // 构建发送帧
+    txBuffer[0] = 0xAA;        // 帧头
+    txBuffer[1] = 0x00;        // 设备地址
+    txBuffer[2] = cmd;         // 命令字
+    
+    // 填充命令内容（5字节）
+    for(uint8_t i = 0; i < 5; i++) {
+        txBuffer[3+i] = (i < dataLen) ? data[i] : 0x00;
+    }
+    
+    // 计算校验和
+    txBuffer[8] = Sensor_CalculateChecksum(txBuffer, 8);  // 使用校验和函数
+    txBuffer[9] = 0xBB;        // 帧尾
+    
+    // 打印发送的数据帧
+    printf("\r\n[发送] ");
+    for(uint8_t i = 0; i < 10; i++) {
+        printf("%02X ", txBuffer[i]);
+    }
+    printf("\r\n");
+    
+    // 清空全局接收缓冲区
+    memset(rxBuffer, 0, SENSOR_BUFFER_SIZE);  // 在接收前清空全局rxBuffer
+    
+    // 发送数据
+    if(HAL_UART_Transmit(&huart2, txBuffer, 10, 500) != HAL_OK) {
+        printf("[错误] 发送失败\r\n");
+        lastError = SENSOR_ERROR_TRANSMIT;
+        return 1;
+    }
+    
+    // 等待接收数据，使用全局rxBuffer
+    HAL_StatusTypeDef rcvStatus = HAL_UART_Receive(&huart2, rxBuffer, 10, 1000);
+    
+    // 打印接收状态和数据
+    printf("[接收] ");
+    if(rcvStatus == HAL_OK) {
+        // 接收成功，打印数据
+        for(uint8_t i = 0; i < 10; i++) {
+            printf("%02X ", rxBuffer[i]);
+        }
+        printf("\r\n");
+        
+        // 验证接收帧格式
+        if(rxBuffer[0] != 0x55 || rxBuffer[9] != 0xAA) {  // 检查帧头帧尾
+            printf("[错误] 帧格式错误\r\n");
+            lastError = SENSOR_ERROR_FORMAT;
+            return 1;
+        }
+        
+        if(rxBuffer[1] != cmd) {  // 检查命令字匹配
+            printf("[错误] 命令不匹配: 期望%02X, 实际%02X\r\n", cmd, rxBuffer[1]);
+            lastError = SENSOR_ERROR_CMD;
+            return 1;
+        }
+        
+        // 检查响应字节(Byte2)
+        switch(rxBuffer[2]) {
+            case 0x01:  // 命令正确且执行
+                break;  // 继续处理
+            case 0x02:
+                printf("[错误] 命令正确但执行错误\r\n");
+                lastError = SENSOR_ERROR_EXECUTE;
+                return 1;
+            case 0x03:
+                printf("[错误] 命令错误\r\n");
+                lastError = SENSOR_ERROR_CMD;
+                return 1;
+            case 0x04:
+                printf("[错误] 无零点信息\r\n");
+                lastError = SENSOR_ERROR_NO_ZERO;
+                return 1;
+            default:
+                printf("[错误] 未知响应状态：0x%02X\r\n", rxBuffer[2]);
+                lastError = SENSOR_ERROR_RESPONSE;
+                return 1;
+        }
+        
+        // 验证校验和
+        if(rxBuffer[8] != Sensor_CalculateChecksum(rxBuffer, 8)) {
+            printf("[错误] 校验和错误\r\n");
+            lastError = SENSOR_ERROR_CHECKSUM;
+            return 1;
+        }
+        
+        // 检查状态字节(Byte7)
+        switch(rxBuffer[7]) {
+            case 0x00:
+                printf("[警告] 传感器未标定\r\n");
+                lastError = SENSOR_ERROR_NOT_CALIBRATED;
+                return 1;
+            case 0x01:
+                // 正常工作中，继续处理
+                break;
+            case 0x02:
+                printf("[警告] 传感器零点平移中\r\n");
+                lastError = SENSOR_ERROR_ZERO_SHIFTING;
+                return 1;
+            case 0x03:
+                printf("[警告] 传感器标定过程中\r\n");
+                lastError = SENSOR_ERROR_CALIBRATING;
+                return 1;
+            case 0x04:
+                printf("[错误] 传感器故障\r\n");
+                lastError = SENSOR_ERROR_FAULT;
+                return 1;
+            default:
+                printf("[错误] 未知传感器状态：0x%02X\r\n", rxBuffer[7]);
+                lastError = SENSOR_ERROR_UNKNOWN_STATUS;
+                return 1;
+        }
+        
+        return 0;  // 通信成功
+    }
+    else if(rcvStatus == HAL_TIMEOUT) {
+        printf("接收超时\r\n");
+        lastError = SENSOR_ERROR_TIMEOUT;
+    }
+    else {
+        printf("接收错误: %d\r\n", rcvStatus);
+        lastError = SENSOR_ERROR_RECEIVE;
+    }
+    
+    return 1;  // 通信失败
 }
 
 /**
   * @brief  解析传感器响应数据
-  * @retval 解析结果，失败则返回0xFFFF
+  * @retval 解析结果，失败则返回0xFFFFFFFF（对于32位值）或0xFFFF（对于16位值）
   */
-static uint16_t Sensor_ParseResponse(void)
+static uint32_t Sensor_ParseResponse(void)
 {
-  // 提取数据（根据具体命令解析Byte3~Byte6中的数据）
-  uint16_t value = (rxBuffer[3] << 8) | rxBuffer[4];  // 假设数据在Byte3和Byte4中
+  uint32_t value;
   
-  // 检查状态字节（Byte7）
-  if (rxBuffer[7] != 0x00) {  // 假设0x00表示正常状态
-    lastError = SENSOR_ERROR_VALUE;
-    printf("传感器状态异常：0x%02X\r\n", rxBuffer[7]);
-    return 0xFFFF;
-  }
+  // 所有命令都使用32位解析（4字节数据）
+  // 低16位在前（Byte3-4），高16位在后（Byte5-6）
+  uint32_t lowWord = ((uint32_t)rxBuffer[3] << 8) |  // 低16位高字节
+                    ((uint32_t)rxBuffer[4]);          // 低16位低字节
+  uint32_t highWord = ((uint32_t)rxBuffer[5] << 8) | // 高16位高字节
+                     ((uint32_t)rxBuffer[6]);         // 高16位低字节
+  
+  // 组合成32位值
+  value = (highWord << 16) | lowWord;  // 组合：高16位在高位，低16位在低位
+  
+  // 打印调试信息
+  printf("[调试] 数据解析: 命令=0x%02X, Byte3-6: %02X %02X %02X %02X\r\n", 
+         rxBuffer[1], rxBuffer[3], rxBuffer[4], rxBuffer[5], rxBuffer[6]);
+  printf("[调试] 低16位: 0x%04X, 高16位: 0x%04X, 组合后: 0x%08X\r\n", 
+         (uint16_t)lowWord, (uint16_t)highWord, value);
   
   return value;  // 返回解析出的数据
-}
-
-/**
-  * @brief  验证校验和
-  * @param  data: 数据缓冲区
-  * @param  length: 需要校验的长度(不包括校验和本身)
-  * @retval 校验结果: 1-通过, 0-失败
-  */
-static uint8_t Sensor_VerifyChecksum(uint8_t *data, uint8_t length)
-{
-  uint8_t calcChecksum = Sensor_CalculateChecksum(data, length);  // 计算校验和
-  return (calcChecksum == data[length]);  // 比较计算值与接收值
 }
 
 /**
@@ -478,10 +533,16 @@ static uint8_t Sensor_VerifyChecksum(uint8_t *data, uint8_t length)
 static uint8_t Sensor_CalculateChecksum(uint8_t *data, uint8_t length)
 {
   uint8_t sum = 0;  // 校验和初始值
+  
+  // 累加每个字节
   for (uint8_t i = 0; i < length; i++) {
     sum += data[i];  // 累加每个字节
   }
-  return sum;  // 返回累加和作为校验和
+  
+  // 取反加1
+  sum = (~sum) + 1;  // 按照协议要求：取反加1
+  
+  return sum;  // 返回最终的校验和
 }
 
 /**
@@ -490,7 +551,7 @@ static uint8_t Sensor_CalculateChecksum(uint8_t *data, uint8_t length)
   * @param  cmd: 命令类型
   * @retval 检查结果: 1-有效, 0-无效
   */
-static uint8_t Sensor_IsValueValid(uint16_t value, uint8_t cmd)
+static uint8_t Sensor_IsValueValid(uint32_t value, uint8_t cmd)
 {
   // 根据不同命令类型检查数据有效性
   switch (cmd) {
@@ -502,13 +563,14 @@ static uint8_t Sensor_IsValueValid(uint16_t value, uint8_t cmd)
       // 量程值必须大于0
       if (value == 0) {
         lastError = SENSOR_ERROR_VALUE;
+        printf("[错误] 量程值无效: 等于0\r\n");  // 修改错误提示更明确
         return 0;
       }
+      printf("[调试] 当前量程值: 0x%08X (%u)\r\n", value, value);  // 添加调试信息
       return 1;
       
     case SENSOR_CMD_READ_ZERO:
-      // 零点值范围检查
-      return 1;  // 默认接受所有零点值
+      return 1;  // 接受所有零点值
       
     default:
       return 0;  // 未知命令类型
@@ -538,6 +600,45 @@ const char* Sensor_GetErrorString(uint8_t errorCode)
       
     case SENSOR_ERROR_VALUE:
       return "数据值无效";  // 数据值无效
+      
+    case SENSOR_ERROR_TRANSMIT:
+      return "发送错误";  // 发送错误
+      
+    case SENSOR_ERROR_RECEIVE:
+      return "接收错误";  // 接收错误
+      
+    case SENSOR_ERROR_FORMAT:
+      return "帧格式错误";  // 帧格式错误
+      
+    case SENSOR_ERROR_CMD:
+      return "命令不匹配";  // 命令不匹配
+      
+    case SENSOR_ERROR_STATUS:
+      return "状态异常";  // 状态异常
+      
+    case SENSOR_ERROR_EXECUTE:
+      return "命令执行错误";  // 命令执行错误
+      
+    case SENSOR_ERROR_NO_ZERO:
+      return "无零点信息";  // 无零点信息
+      
+    case SENSOR_ERROR_RESPONSE:
+      return "未知响应状态";  // 未知响应状态
+      
+    case SENSOR_ERROR_NOT_CALIBRATED:
+      return "传感器未标定";  // 传感器未标定
+      
+    case SENSOR_ERROR_ZERO_SHIFTING:
+      return "传感器零点平移中";  // 传感器零点平移中
+      
+    case SENSOR_ERROR_CALIBRATING:
+      return "传感器标定过程中";  // 传感器标定过程中
+      
+    case SENSOR_ERROR_FAULT:
+      return "传感器故障";  // 传感器故障
+      
+    case SENSOR_ERROR_UNKNOWN_STATUS:
+      return "未知传感器状态";  // 未知传感器状态
       
     default:
       return "未知错误";  // 未知错误代码

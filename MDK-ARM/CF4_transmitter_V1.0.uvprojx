@@ -394,6 +394,26 @@
           <GroupName>Application/User/Core</GroupName>
           <Files>
             <File>
+              <FileName>dac7311.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\dac7311.c</FilePath>
+            </File>
+            <File>
+              <FileName>oled.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\oled.c</FilePath>
+            </File>
+            <File>
+              <FileName>sensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\sensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\spi.c</FilePath>
+            </File>
+            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Core/Src/main.c</FilePath>
@@ -423,31 +443,16 @@
               <FileType>1</FileType>
               <FilePath>../Core/Src/stm32f1xx_hal_msp.c</FilePath>
             </File>
-            <File>
-              <FileName>dac7311.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\dac7311.c</FilePath>
-            </File>
-            <File>
-              <FileName>oled.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\oled.c</FilePath>
-            </File>
-            <File>
-              <FileName>sensor.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\sensor.c</FilePath>
-            </File>
-            <File>
-              <FileName>spi.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\spi.c</FilePath>
-            </File>
           </Files>
         </Group>
         <Group>
           <GroupName>Drivers/STM32F1xx_HAL_Driver</GroupName>
           <Files>
+            <File>
+              <FileName>stm32f1xx_hal_spi.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_spi.c</FilePath>
+            </File>
             <File>
               <FileName>stm32f1xx_hal_gpio_ex.c</FileName>
               <FileType>1</FileType>
@@ -512,11 +517,6 @@
               <FileName>stm32f1xx_hal_uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c</FilePath>
-            </File>
-            <File>
-              <FileName>stm32f1xx_hal_spi.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>../Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_spi.c</FilePath>
             </File>
           </Files>
         </Group>

@@ -610,6 +610,6 @@ static void OLED_WriteData(uint8_t data)
     buf[0] = OLED_DATA;   // Ð´Êý¾Ý
     buf[1] = data;
     HAL_I2C_Master_Transmit(oled_hi2c, OLED_ADDR, buf, 2, 0xFF);
-} 
+}
 
 

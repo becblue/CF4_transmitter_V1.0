@@ -35,7 +35,7 @@ git reset --hard e7321c40635d89199a799aa02dbe32eb92c2df46
 
 
 推送当前项目到远程仓库（推送之前，系统需要检查本地版本是否比远程版本新）
-git push -f origin main
+git push -u origin main
 
 强制推动当前项目到远程仓库（不论是否远程比本地版本更新，也要推送）
 git push -f origin main

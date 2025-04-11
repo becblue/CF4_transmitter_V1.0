@@ -2,68 +2,70 @@
 /**
   ******************************************************************************
   * @file    stm32f1xx_it.c
-  * @brief   中断服务程序
+  * @brief   锟叫断凤拷锟斤拷锟斤拷锟?
   ******************************************************************************
   * @attention
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
-  * 本软件使用的许可条款可在本软件组件的根目录中的LICENSE文件中找到。
-  * 如果没有随本软件提供LICENSE文件，则按"原样"提供。
+  * 锟斤拷锟斤拷锟绞癸拷玫锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷诒锟斤拷锟斤拷锟斤拷锟斤拷母锟侥柯硷拷械锟絃ICENSE锟侥硷拷锟斤拷锟揭碉拷锟斤拷锟斤拷
+  * 锟斤拷锟矫伙拷锟斤拷姹撅拷锟斤拷锟结供LICENSE锟侥硷拷锟斤拷锟斤拷"原锟斤拷"锟结供锟斤拷
   *
   ******************************************************************************
   */
 /* USER CODE END Header */
 
-/* 包含文件 ------------------------------------------------------------------*/
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "stm32f1xx_it.h"
-/* 私有包含文件 ----------------------------------------------------------*/
+/* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 /* USER CODE END Includes */
 
-/* 私有类型定义 -----------------------------------------------------------*/
+/* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
 
 /* USER CODE END TD */
 
-/* 私有宏定义 ------------------------------------------------------------*/
+/* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
 /* USER CODE END PD */
 
-/* 私有宏 -------------------------------------------------------------*/
+/* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
 /* USER CODE END PM */
 
-/* 私有变量 ---------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
 
-/* 私有函数原型 -----------------------------------------------*/
+/* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
-/* 私有用户代码 ---------------------------------------------------------*/
+/* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
 
-/* 外部变量 --------------------------------------------------------*/
-
+/* External variables --------------------------------------------------------*/
+extern I2C_HandleTypeDef hi2c1;
+extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart2;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
 
 /******************************************************************************/
-/*           Cortex-M3处理器中断和异常处理程序          */
+/*           Cortex-M3 Processor Interruption and Exception Handlers          */
 /******************************************************************************/
 /**
-  * @brief 此函数处理不可屏蔽中断
+  * @brief This function handles Non maskable interrupt.
   */
 void NMI_Handler(void)
 {
@@ -78,7 +80,7 @@ void NMI_Handler(void)
 }
 
 /**
-  * @brief 此函数处理硬件错误中断
+  * @brief This function handles Hard fault interrupt.
   */
 void HardFault_Handler(void)
 {
@@ -93,7 +95,7 @@ void HardFault_Handler(void)
 }
 
 /**
-  * @brief 此函数处理内存管理错误
+  * @brief This function handles Memory management fault.
   */
 void MemManage_Handler(void)
 {
@@ -108,7 +110,7 @@ void MemManage_Handler(void)
 }
 
 /**
-  * @brief 此函数处理预取错误，内存访问错误
+  * @brief This function handles Prefetch fault, memory access fault.
   */
 void BusFault_Handler(void)
 {
@@ -123,7 +125,7 @@ void BusFault_Handler(void)
 }
 
 /**
-  * @brief 此函数处理未定义指令或非法状态
+  * @brief This function handles Undefined instruction or illegal state.
   */
 void UsageFault_Handler(void)
 {
@@ -138,7 +140,7 @@ void UsageFault_Handler(void)
 }
 
 /**
-  * @brief 此函数处理通过SWI指令的系统服务调用
+  * @brief This function handles System service call via SWI instruction.
   */
 void SVC_Handler(void)
 {
@@ -151,7 +153,7 @@ void SVC_Handler(void)
 }
 
 /**
-  * @brief 此函数处理调试监视器
+  * @brief This function handles Debug monitor.
   */
 void DebugMon_Handler(void)
 {
@@ -164,7 +166,7 @@ void DebugMon_Handler(void)
 }
 
 /**
-  * @brief 此函数处理系统服务的挂起请求
+  * @brief This function handles Pendable request for system service.
   */
 void PendSV_Handler(void)
 {
@@ -177,7 +179,7 @@ void PendSV_Handler(void)
 }
 
 /**
-  * @brief 此函数处理系统滴答定时器
+  * @brief This function handles System tick timer.
   */
 void SysTick_Handler(void)
 {
@@ -191,11 +193,67 @@ void SysTick_Handler(void)
 }
 
 /******************************************************************************/
-/* STM32F1xx外设中断处理程序                                    */
-/* 在此处添加使用的外设的中断处理程序                                 */
-/* 有关可用的外设中断处理程序名称，                      */
-/* 请参阅启动文件 (startup_stm32f1xx.s)                    */
+/* STM32F1xx Peripheral Interrupt Handlers                                    */
+/* Add here the Interrupt Handlers for the used peripherals.                  */
+/* For the available peripheral interrupt handler names,                      */
+/* please refer to the startup file (startup_stm32f1xx.s).                    */
 /******************************************************************************/
+
+/**
+  * @brief This function handles USART1 global interrupt.
+  */
+void USART1_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART1_IRQn 0 */
+
+  /* USER CODE END USART1_IRQn 0 */
+  HAL_UART_IRQHandler(&huart1);
+  /* USER CODE BEGIN USART1_IRQn 1 */
+
+  /* USER CODE END USART1_IRQn 1 */
+}
+
+/**
+  * @brief This function handles USART2 global interrupt.
+  */
+void USART2_IRQHandler(void)
+{
+  /* USER CODE BEGIN USART2_IRQn 0 */
+
+  /* USER CODE END USART2_IRQn 0 */
+  HAL_UART_IRQHandler(&huart2);
+  /* USER CODE BEGIN USART2_IRQn 1 */
+
+  /* USER CODE END USART2_IRQn 1 */
+}
+
+/**
+  * @brief This function handles I2C1 event interrupt.
+  */
+void I2C1_EV_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C1_EV_IRQn 0 */
+
+  /* USER CODE END I2C1_EV_IRQn 0 */
+  HAL_I2C_EV_IRQHandler(&hi2c1);
+  /* USER CODE BEGIN I2C1_EV_IRQn 1 */
+
+  /* USER CODE END I2C1_EV_IRQn 1 */
+}
+
+/**
+  * @brief This function handles I2C1 error interrupt.
+  */
+void I2C1_ER_IRQHandler(void)
+{
+  /* USER CODE BEGIN I2C1_ER_IRQn 0 */
+
+  /* USER CODE END I2C1_ER_IRQn 0 */
+  HAL_I2C_ER_IRQHandler(&hi2c1);
+  /* USER CODE BEGIN I2C1_ER_IRQn 1 */
+
+  /* USER CODE END I2C1_ER_IRQn 1 */
+}
 
 /* USER CODE BEGIN 1 */
 

@@ -1,138 +1,39 @@
-/**
-  ******************************************************************************
-  * @file    sensor.h
-  * @brief   CF4ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½Í·ï¿½Ä¼ï¿½
-  ******************************************************************************
-  * @attention
-  *
-  * ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CF4ï¿½ï¿½ï¿½å´«ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ÅµÄ½Ó¿Úºï¿½ï¿½ï¿½ï¿½Ý½á¹¹
-  * ï¿½ï¿½ï¿½Úµï¿½Ò»Ä£ï¿½é´«ï¿½ï¿½ï¿½ï¿½Í¨Ñ¶Ð­ï¿½ï¿½Êµï¿½ï¿½
-  * Í¨ï¿½ï¿½USART1ï¿½ë´«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½
-  *
-  ******************************************************************************
-  */
+#ifndef __SENSOR_H
+#define __SENSOR_H
 
-/* ï¿½ï¿½Ö¹ï¿½Ý¹ï¿½ï¿½ï¿½ï¿? -------------------------------------*/
-#ifndef __SENSOR_H__
-#define __SENSOR_H__
+#include <stdint.h>  // Ìí¼Ó±ê×¼ÕûÊýÀàÐÍ¶¨Òå
+#include "main.h"    // °üº¬STM32Ïà¹Ø¶¨Òå
+#include <stdio.h>   // Ìí¼Ó±ê×¼ÊäÈëÊä³ö¶¨Òå
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+/* »º³åÇø´óÐ¡¶¨Òå */
+#define SENSOR_BUFFER_SIZE     32      // Í¨ÐÅ»º³åÇø´óÐ¡
 
-/* ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ ------------------------------------------------------------------*/
-#include "main.h"
-#include "usart.h"
-#include "stm32f1xx_hal.h"
-
-/* ï¿½ê¶¨ï¿½ï¿½ ------------------------------------------------------------*/
-#define SENSOR_CMD_READ_CONC      0x03    // ï¿½ï¿½È¡Å¨ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½
-#define SENSOR_CMD_READ_RANGE     0x04    // ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½
-#define SENSOR_CMD_READ_ZERO      0x05    // ï¿½ï¿½È¡ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿?
-
-#define SENSOR_FRAME_HEADER       0x42    // Ö¡Í·
-#define SENSOR_FRAME_END          0x43    // Ö¡Î²
-
-#define SENSOR_BUFFER_SIZE        32      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½Å»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡
-#define SENSOR_TIMEOUT            1000    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½Å³ï¿½Ê±Ê±ï¿½ï¿½(ms)
-
-/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ë¶¨ï¿½ï¿? */
-#define SENSOR_ERROR_NONE          0x00    // ï¿½Þ´ï¿½ï¿½ï¿½
-#define SENSOR_ERROR_TIMEOUT       0x01    // Í¨ï¿½Å³ï¿½Ê±
-#define SENSOR_ERROR_CHECKSUM      0x02    // Ð£ï¿½ï¿½Í´ï¿½ï¿½ï¿?
-#define SENSOR_ERROR_FRAME         0x03    // Ö¡ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½
-#define SENSOR_ERROR_VALUE         0x04    // ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½
-
-/* ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ï¿½ï¿½ -----------------------------------------------------------*/
-/**
-  * @brief  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½ï¿½
-  */
+/* ´«¸ÐÆ÷Êý¾Ý½á¹¹Ìå¶¨Òå */
 typedef struct {
-    uint16_t zeroPoint;       // ï¿½ï¿½ï¿½Ö?
-    uint16_t rangeValue;      // ï¿½ï¿½ï¿½ï¿½Öµ
-    uint16_t concentration;   // ï¿½ï¿½Ç°Å¨ï¿½ï¿½Öµ
-    uint16_t outputValue;     // ï¿½ï¿½ï¿½Ö?(0-4095)
-    float outputVoltage;      // ï¿½ï¿½ï¿½ï¿½ï¿½Ñ?(0-3.3V)
-    float outputCurrent;      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?(4-20mA)
+    uint16_t concentration;    // Å¨¶ÈÖµ
+    uint32_t rangeValue;      // Á¿³ÌÖµ£¨32Î»£©
+    uint16_t zeroPoint;       // ÁãµãÖµ
+    uint16_t outputValue;     // Êä³öÖµ(0-4095)
+    float outputVoltage;      // Êä³öµçÑ¹(0-3.3V)
+    float outputCurrent;      // Êä³öµçÁ÷(4-20mA)
 } SensorData_t;
 
-/* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ --------------------------------------------------------------*/
-/**
-  * @brief  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½Å³ï¿½Ê¼ï¿½ï¿½
-  * @retval ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿?: 0-ï¿½É¹ï¿½, 1-Ê§ï¿½ï¿½
-  */
+/* º¯ÊýÉùÃ÷ */
 uint8_t Sensor_Init(void);
-
-/**
-  * @brief  ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¨ï¿½ï¿½Öµ
-  * @retval Å¨ï¿½ï¿½Öµ
-  */
 uint16_t Sensor_GetConcentration(void);
-
-/**
-  * @brief  ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
-  * @retval ï¿½ï¿½ï¿½ï¿½Öµ
-  */
-uint16_t Sensor_GetRange(void);
-
-/**
-  * @brief  ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö?
-  * @retval ï¿½ï¿½ï¿½Ö?
-  */
+uint32_t Sensor_GetRange(void);  // ÐÞ¸Ä·µ»ØÖµÎª32Î»
 uint16_t Sensor_GetZeroPoint(void);
-
-/**
-  * @brief  ï¿½ï¿½ï¿½ã´«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö?
-  * @param  concentration: ï¿½ï¿½Ç°Å¨ï¿½ï¿½Öµ
-  * @param  zeroPoint: ï¿½ï¿½ï¿½Ö?
-  * @param  rangeValue: ï¿½ï¿½ï¿½ï¿½Öµ
-  * @retval ï¿½ï¿½ï¿½Ö?(0-4095)
-  */
-uint16_t Sensor_CalculateOutput(uint16_t concentration, uint16_t zeroPoint, uint16_t rangeValue);
-
-/**
-  * @brief  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ?
-  * @param  value: ï¿½ï¿½ï¿½Ö?(0-4095)
-  * @retval ï¿½ï¿½ï¿½ï¿½ï¿½Ñ?(0-3.3V)
-  */
+uint16_t Sensor_CalculateOutput(uint16_t concentration, uint16_t zeroPoint, uint32_t rangeValue);  // ÐÞ¸Ä²ÎÊýÀàÐÍ
 float Sensor_CalculateVoltage(uint16_t value);
-
-/**
-  * @brief  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
-  * @param  value: ï¿½ï¿½ï¿½Ö?(0-4095)
-  * @retval ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?(4-20mA)
-  */
 float Sensor_CalculateCurrent(uint16_t value);
-
-/**
-  * @brief  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-  * @param  data: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½Ö¸ï¿½ï¿½
-  * @retval ï¿½ï¿½ï¿½Â½ï¿½ï¿?: 0-ï¿½É¹ï¿½, 1-Ê§ï¿½ï¿½
-  */
 uint8_t Sensor_UpdateAllData(SensorData_t *data);
-
-/**
-  * @brief  ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö?
-  * @param  value: ï¿½ï¿½ï¿½Ö?(0-4095)
-  * @retval ï¿½ï¿½
-  */
 void Sensor_SetOutput(uint16_t value);
-
-/**
-  * @brief  ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ò»ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-  * @retval ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
-  */
 uint8_t Sensor_GetLastError(void);
-
-/**
-  * @brief  ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½
-  * @param  errorCode: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿?
-  * @retval ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½
-  */
 const char* Sensor_GetErrorString(uint8_t errorCode);
 
-#ifdef __cplusplus
-}
-#endif
+/* Íâ²¿±äÁ¿ÉùÃ÷ */
+extern UART_HandleTypeDef huart2;  // UART2¾ä±ú
 
-#endif /* __SENSOR_H__ */
+#endif /* __SENSOR_H */ 
+
+

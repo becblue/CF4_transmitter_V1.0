@@ -2,82 +2,84 @@
 /**
   ******************************************************************************
   * @file           : main.c
-  * @brief          : 主程序
+  * @brief          : 锟斤拷锟斤拷锟斤拷
   ******************************************************************************
   * @attention
   *
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
-  * 本软件使用的许可条款可在本软件组件的根目录中的LICENSE文件中找到。
-  * 如果没有随本软件提供LICENSE文件，则按"原样"提供。
+  * 锟斤拷锟斤拷锟绞癸拷玫锟斤拷锟斤拷锟斤拷锟斤拷锟斤拷诒锟斤拷锟斤拷锟斤拷锟斤拷母锟侥柯硷拷械锟絃ICENSE锟侥硷拷锟斤拷锟揭碉拷锟斤拷锟斤拷
+  * 锟斤拷锟矫伙拷锟斤拷姹撅拷锟斤拷锟结供LICENSE锟侥硷拷锟斤拷锟斤拷"原锟斤拷"锟结供锟斤拷
   *
   ******************************************************************************
   */
 /* USER CODE END Header */
-/* 包含文件 ------------------------------------------------------------------*/
+/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
-
-/* 私有包含文件 ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 #include "sensor.h"
 #include "dac7311.h"
 #include "oled.h"
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
 /* USER CODE END Includes */
 
-/* 私有类型定义 -----------------------------------------------------------*/
+/* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
 /* USER CODE END PTD */
 
-/* 私有宏定义 ------------------------------------------------------------*/
+/* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SENSOR_UPDATE_INTERVAL   500       // 传感器数据更新间隔(ms)
-#define DISPLAY_UPDATE_INTERVAL  1000      // 显示更新间隔(ms)
-#define WARMUP_TIME              3000      // 预热时间(ms)
+#define SENSOR_UPDATE_INTERVAL   500       // 锟斤拷锟斤拷锟斤拷锟斤拷锟捷革拷锟铰硷拷锟?(ms)
+#define DISPLAY_UPDATE_INTERVAL  1000      // 锟斤拷示锟斤拷锟铰硷拷锟?(ms)
+#define WARMUP_TIME              3000      // 预锟斤拷时锟斤拷(ms)
 /* USER CODE END PD */
 
-/* 私有宏 -------------------------------------------------------------*/
+/* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
 /* USER CODE END PM */
 
-/* 私有变量 ---------------------------------------------------------*/
+/* Private variables ---------------------------------------------------------*/
+extern SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
-/* 这些变量暂时未使用，根据需要取消注释
-static SensorData_t sensorData;            // 传感器数据结构体
-static uint32_t lastSensorUpdateTime = 0;  // 上次传感器数据更新时间
-static uint32_t lastDisplayUpdateTime = 0;  // 上次显示更新时间
-static uint8_t systemError = 0;            // 系统错误标志
-static uint8_t isWarmingUp = 1;            // 预热标志
-static uint32_t warmupStartTime = 0;       // 预热开始时间
-static uint8_t systemStatus = 0;           // 系统状态：0-启动中, 1-预热中, 2-正常运行, 3-错误
+/* 锟斤拷些锟斤拷锟斤拷锟斤拷时未使锟矫ｏ拷锟斤拷锟斤拷锟斤拷要取锟斤拷注锟斤拷
+static SensorData_t sensorData;            // 锟斤拷锟斤拷锟斤拷锟斤拷锟捷结构锟斤拷
+static uint32_t lastSensorUpdateTime = 0;  // 锟较次达拷锟斤拷锟斤拷锟斤拷锟捷革拷锟斤拷时锟斤拷
+static uint32_t lastDisplayUpdateTime = 0;  // 锟较达拷锟斤拷示锟斤拷锟斤拷时锟斤拷
+static uint8_t systemError = 0;            // 系统锟斤拷锟斤拷锟街?
+static uint8_t isWarmingUp = 1;            // 预锟饺憋拷志
+static uint32_t warmupStartTime = 0;       // 预锟饺匡拷始时锟斤拷
+static uint8_t systemStatus = 0;           // 系统状态锟斤拷0-锟斤拷锟斤拷锟斤拷, 1-预锟斤拷锟斤拷, 2-锟斤拷锟斤拷锟斤拷锟斤拷, 3-锟斤拷锟斤拷
 */
 /* USER CODE END PV */
 
-/* 私有函数原型 -----------------------------------------------*/
+/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
 
-/* 私有用户代码 ---------------------------------------------------------*/
+/* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
 /* USER CODE END 0 */
 
 /**
-  * @brief  主函数
+  * @brief  The application entry point.
   * @retval int
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -100,33 +102,25 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART1_UART_Init();  // 首先初始化调试串口
-  printf("\r\n\r\n系统启动...\r\n");  // 立即输出启动信息
-  printf("初始化其他外设...\r\n");
-  
   MX_I2C1_Init();
+  MX_USART1_UART_Init();
   MX_USART2_UART_Init();
-  MX_SPI1_Init();
-  
-  printf("外设初始化完成\r\n");
-  printf("当前系统时钟频率: %d Hz\r\n", HAL_RCC_GetSysClockFreq());
-  
   /* USER CODE BEGIN 2 */
   // 初始化OLED显示
   printf("初始化OLED...\r\n");
-  if(OLED_Init(&hi2c1) != 0) {  // 初始化OLED显示屏，传入I2C1句柄
+  if(OLED_Init(&hi2c1) != 0) {
     printf("OLED初始化失败!\r\n");
     Error_Handler();
   }
   printf("OLED初始化成功\r\n");
   
-  OLED_Clear(); // 清空显示
+  OLED_Clear();
   OLED_ShowString(0, 0, "System Starting...");
-  OLED_Refresh(); // 刷新显示
-  printf("OLED显示测试信息\r\n");
+  OLED_Refresh();
+  printf("OLED显示启动信息\r\n");
   
   // 初始化DAC7311
-  if (DAC7311_Init(&hspi1, DAC1SYNC_GPIO_Port, DAC1SYNC_Pin) != 0) {
+  if (DAC7311_Init() != 0) {
     // DAC初始化失败
     OLED_Clear();
     OLED_ShowString(0, 0, "DAC Init Failed!");
@@ -134,12 +128,12 @@ int main(void)
     Error_Handler();
   }
   
-  // 初始化传感器通信
+  // 初始化传感器
   OLED_Clear();
   OLED_ShowString(0, 0, "Warming up...");
   OLED_Refresh();
   if (Sensor_Init() != 0) {
-    // 传感器初始化失败
+    // 初始化失败
     OLED_Clear();
     OLED_ShowString(0, 0, "Sensor Error!");
     OLED_ShowString(0, 1, "Code: ");
@@ -151,18 +145,18 @@ int main(void)
   }
   
   // 系统预热
-  uint8_t warmupSeconds = 3; // 预热时间3秒
+  uint8_t warmupSeconds = 3; // 预预热时间3秒
   for (uint8_t i = 0; i < warmupSeconds; i++) {
     OLED_Clear();
     OLED_ShowString(0, 0, "System Warming Up");
     char timeStr[16];
-    sprintf(timeStr, "Wait %ds", warmupSeconds - i);  // 显示剩余秒数
+    sprintf(timeStr, "Wait %ds", warmupSeconds - i);  // 显示剩余时间
     OLED_ShowString(0, 2, timeStr);
     OLED_Refresh();
-    HAL_Delay(1000); // 延时1秒
+    HAL_Delay(1000); // 等待1秒
   }
   
-  // 预热完成，进入正常工作模式
+  // 预热完成
   OLED_Clear();
   OLED_ShowString(0, 0, "System Ready");
   OLED_Refresh();
@@ -174,12 +168,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
-    // 1. 传感器数据采集流程
-    SensorData_t sensorData;  // 创建传感器数据结构体
-    if (Sensor_UpdateAllData(&sensorData) == 0)  // 更新所有传感器数据
+    // 1. 传感器数据采集处理
+    SensorData_t sensorData;  // 定义传感器数据结构体
+    if (Sensor_UpdateAllData(&sensorData) == 0)  // 尝试更新所有传感器数据
     {
-      // 2. 数据处理与显示流程
+      // 2. 数据处理和显示部分
       // 在OLED上显示数据
       OLED_Clear();  // 清屏
       
@@ -197,7 +193,7 @@ int main(void)
       OLED_ShowString(0, 4, buf);
       
       // 3. 调试信息输出
-      printf("传感器数据更新：\r\n");
+      printf("\r\n[%lu ms] 传感器数据更新：\r\n", HAL_GetTick());
       printf("浓度: %d\r\n", sensorData.concentration);
       printf("输出值: %d\r\n", sensorData.outputValue);
       printf("电压: %.2fV\r\n", sensorData.outputVoltage);
@@ -206,7 +202,7 @@ int main(void)
     else
     {
       // 数据更新失败，显示错误信息
-      printf("错误：%s\r\n", Sensor_GetErrorString(Sensor_GetLastError()));
+      printf("\r\n[%lu ms] 错误：%s\r\n", HAL_GetTick(), Sensor_GetErrorString(Sensor_GetLastError()));
       
       // 在OLED上显示错误信息
       OLED_Clear();
@@ -215,14 +211,12 @@ int main(void)
     }
     
     HAL_Delay(1000);  // 每秒更新一次数据
-    
-    /* USER CODE END 3 */
   }
-  /* USER CODE END WHILE */
+  /* USER CODE END 3 */
 }
 
 /**
-  * @brief 系统时钟配置
+  * @brief System Clock Configuration
   * @retval None
   */
 void SystemClock_Config(void)
@@ -230,7 +224,8 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** 根据RCC_OscInitTypeDef结构中指定的参数初始化RCC振荡器
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
   */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
@@ -244,7 +239,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-  /** 初始化CPU、AHB和APB总线时钟
+  /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
@@ -264,13 +259,13 @@ void SystemClock_Config(void)
 /* USER CODE END 4 */
 
 /**
-  * @brief  错误处理函数
+  * @brief  This function is executed in case of error occurrence.
   * @retval None
   */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-  /* 用户可以添加自己的实现来报告HAL错误返回状态 */
+  /* 锟矫伙拷锟斤拷锟斤拷锟斤拷锟斤拷约锟斤拷锟绞碉拷锟斤拷锟斤拷锟斤拷锟紿AL锟斤拷锟襟返伙拷状态 */
   __disable_irq();
   while (1)
   {
@@ -280,16 +275,17 @@ void Error_Handler(void)
 
 #ifdef  USE_FULL_ASSERT
 /**
-  * @brief  报告源文件名和源行号，其中发生assert_param错误
-  * @param  file: 指向源文件名的指针
-  * @param  line: assert_param错误行源码号
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
   * @retval None
   */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* 用户可以添加自己的实现来报告文件名和行号，
-     例如：printf("参数错误值：文件%s，行%d\r\n", file, line) */
+  /* 锟矫伙拷锟斤拷锟斤拷锟斤拷锟斤拷约锟斤拷锟绞碉拷锟斤拷锟斤拷锟斤拷锟斤拷募锟斤拷锟斤拷锟斤拷泻牛锟?
+     锟斤拷锟界：printf("锟斤拷锟斤拷锟斤拷锟斤拷值锟斤拷锟侥硷拷%s锟斤拷锟斤拷%d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */

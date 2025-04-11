@@ -21,8 +21,20 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "stm32f1xx_hal.h"  // 娣诲姞HAL搴撳ご鏂囦欢
-#include "stm32f1xx_hal_spi.h"  // 娣诲姞SPI鐩稿叧瀹氫箟
+
+// GPIO引脚定义
+#define DAC_CLK_PIN     GPIO_PIN_13    // PB13 - CLK
+#define DAC_DIN_PIN     GPIO_PIN_14    // PB14 - DIN
+#define DAC_SYNC_PIN    GPIO_PIN_15    // PB15 - SYNC
+#define DAC_GPIO_PORT   GPIOB          // 所有引脚都在GPIOB上
+
+// GPIO位操作宏定义
+#define DAC_CLK_HIGH()   HAL_GPIO_WritePin(DAC_GPIO_PORT, DAC_CLK_PIN, GPIO_PIN_SET)     // CLK置高
+#define DAC_CLK_LOW()    HAL_GPIO_WritePin(DAC_GPIO_PORT, DAC_CLK_PIN, GPIO_PIN_RESET)   // CLK置低
+#define DAC_DIN_HIGH()   HAL_GPIO_WritePin(DAC_GPIO_PORT, DAC_DIN_PIN, GPIO_PIN_SET)     // DIN置高
+#define DAC_DIN_LOW()    HAL_GPIO_WritePin(DAC_GPIO_PORT, DAC_DIN_PIN, GPIO_PIN_RESET)   // DIN置低
+#define DAC_SYNC_HIGH()  HAL_GPIO_WritePin(DAC_GPIO_PORT, DAC_SYNC_PIN, GPIO_PIN_SET)    // SYNC置高
+#define DAC_SYNC_LOW()   HAL_GPIO_WritePin(DAC_GPIO_PORT, DAC_SYNC_PIN, GPIO_PIN_RESET)  // SYNC置低
 
 /* 宏定义 --------------------------------------------------------------------*/
 // DAC7311电源模式定义
@@ -47,7 +59,7 @@ extern "C" {
   * @param  cs_pin: 鐗囬�夊紩鑴氱紪鍙?
   * @retval 鍒濆鍖栫粨鏋?: 0-鎴愬姛, 1-澶辫触
   */
-uint8_t DAC7311_Init(SPI_HandleTypeDef *hspi, GPIO_TypeDef *cs_port, uint16_t cs_pin);
+uint8_t DAC7311_Init(void);
 
 /**
   * @brief  璁剧疆DAC杈撳嚭鍊?
@@ -74,6 +86,9 @@ uint8_t DAC7311_SetPowerMode(uint8_t mode);
   * @retval 璁剧疆缁撴灉: 0-鎴愬姛, 1-澶辫触
   */
 uint8_t DAC7311_SetVoltage(float voltage, float vref);
+
+void DAC7311_PowerDown(void);                // 进入掉电模式
+void DAC7311_PowerUp(void);                  // 退出掉电模式
 
 #ifdef __cplusplus
 }
