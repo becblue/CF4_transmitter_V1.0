@@ -9,7 +9,7 @@
   * Copyright (c) 2025 STMicroelectronics.
   * All rights reserved.
   *
-  * ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½Ä¿Â¼ï¿½Ðµï¿½LICENSEï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½
+  * ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¸ï¿½Ä¿Â¼ï¿½Ðµï¿½LICENSEï¿½Ä¼ï¿½ï¿½ï¿½ï¿½Òµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
   * ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½ï¿½ï¿½á¹©LICENSEï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½"Ô­ï¿½ï¿½"ï¿½á¹©ï¿½ï¿½
   *
   ******************************************************************************
@@ -38,8 +38,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SENSOR_UPDATE_INTERVAL   500       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½Â¼ï¿½ï¿?(ms)
-#define DISPLAY_UPDATE_INTERVAL  1000      // ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Â¼ï¿½ï¿?(ms)
+#define SENSOR_UPDATE_INTERVAL   500       // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½Â¼ï¿½ï¿(ms)
+#define DISPLAY_UPDATE_INTERVAL  1000      // ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Â¼ï¿½ï¿(ms)
 #define WARMUP_TIME              3000      // Ô¤ï¿½ï¿½Ê±ï¿½ï¿½(ms)
 /* USER CODE END PD */
 
@@ -56,7 +56,7 @@ extern SPI_HandleTypeDef hspi1;
 static SensorData_t sensorData;            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½
 static uint32_t lastSensorUpdateTime = 0;  // ï¿½Ï´Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
 static uint32_t lastDisplayUpdateTime = 0;  // ï¿½Ï´ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
-static uint8_t systemError = 0;            // ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½Ö?
+static uint8_t systemError = 0;            // ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½Ö
 static uint8_t isWarmingUp = 1;            // Ô¤ï¿½È±ï¿½Ö¾
 static uint32_t warmupStartTime = 0;       // Ô¤ï¿½È¿ï¿½Ê¼Ê±ï¿½ï¿½
 static uint8_t systemStatus = 0;           // ÏµÍ³×´Ì¬ï¿½ï¿½0-ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, 1-Ô¤ï¿½ï¿½ï¿½ï¿½, 2-ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, 3-ï¿½ï¿½ï¿½ï¿½
@@ -130,7 +130,7 @@ int main(void)
   
   // ³õÊ¼»¯´«¸ÐÆ÷
   OLED_Clear();
-  OLED_ShowString(0, 0, "Warming up...");
+  OLED_ShowString(0, 0, "Warming Up...");
   OLED_Refresh();
   if (Sensor_Init() != 0) {
     // ³õÊ¼»¯Ê§°Ü
@@ -148,7 +148,7 @@ int main(void)
   uint8_t warmupSeconds = 3; // Ô¤Ô¤ÈÈÊ±¼ä3Ãë
   for (uint8_t i = 0; i < warmupSeconds; i++) {
     OLED_Clear();
-    OLED_ShowString(0, 0, "System Warming Up");
+    OLED_ShowString(0, 0, "Warming Up...");
     char timeStr[16];
     sprintf(timeStr, "Wait %ds", warmupSeconds - i);  // ÏÔÊ¾Ê£ÓàÊ±¼ä
     OLED_ShowString(0, 2, timeStr);
@@ -156,11 +156,42 @@ int main(void)
     HAL_Delay(1000); // µÈ´ý1Ãë
   }
   
-  // Ô¤ÈÈÍê³É
-  OLED_Clear();
-  OLED_ShowString(0, 0, "System Ready");
-  OLED_Refresh();
-  HAL_Delay(1000); // ÏÔÊ¾1Ãë
+  // Ô¤ÈÈÍê³ÉºóÖ±½Ó¿ªÊ¼ÏÔÊ¾Êý¾Ý
+  SensorData_t sensorData;  // ¶¨Òå´«¸ÐÆ÷Êý¾Ý½á¹¹Ìå
+  if (Sensor_UpdateAllData(&sensorData) == 0)  // »ñÈ¡³õÊ¼Êý¾Ý
+  {
+    OLED_Clear();
+    char buf[32];
+    
+    // ÏÔÊ¾Å¨¶ÈÖµ
+    sprintf(buf, "PPM:%d", sensorData.concentration);
+    OLED_ShowString(0, 0, buf);
+    
+    // ÏÔÊ¾Á¿³ÌÖµ
+    sprintf(buf, "Range:%d", sensorData.rangeValue);
+    OLED_ShowString(0, 2, buf);
+    
+    // ÏÔÊ¾ÁãµãÖµ
+    sprintf(buf, "Zero:%d", sensorData.zeroPoint);
+    OLED_ShowString(0, 4, buf);
+    
+    // ÏÔÊ¾Êä³öÖµ
+    sprintf(buf, "DAC:%d/4095", sensorData.outputValue);
+    OLED_ShowString(0, 6, buf);
+    
+    OLED_Refresh();
+  }
+  else {
+    // Èç¹û»ñÈ¡Êý¾ÝÊ§°Ü£¬ÏÔÊ¾´íÎóÐÅÏ¢
+    OLED_Clear();
+    OLED_ShowString(0, 0, "Read Failed!");
+    OLED_ShowString(0, 2, "Check Sensor");
+    char errStr[16];
+    sprintf(errStr, "Error:%d", Sensor_GetLastError());
+    OLED_ShowString(0, 4, errStr);
+    OLED_Refresh();
+    HAL_Delay(2000);  // ÏÔÊ¾2Ãë´íÎóÐÅÏ¢
+  }
   
   /* USER CODE END 2 */
 
@@ -172,42 +203,49 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     // 1. ´«¸ÐÆ÷Êý¾Ý²É¼¯´¦Àí
-    SensorData_t sensorData;  // ¶¨Òå´«¸ÐÆ÷Êý¾Ý½á¹¹Ìå
     if (Sensor_UpdateAllData(&sensorData) == 0)  // ³¢ÊÔ¸üÐÂËùÓÐ´«¸ÐÆ÷Êý¾Ý
     {
       // 2. Êý¾Ý´¦ÀíºÍÏÔÊ¾²¿·Ö
-      // ÔÚOLEDÉÏÏÔÊ¾Êý¾Ý
       OLED_Clear();  // ÇåÆÁ
+      char buf[32];
       
       // ÏÔÊ¾Å¨¶ÈÖµ
-      char buf[32];
-      sprintf(buf, "Å¨¶È: %d", sensorData.concentration);
+      sprintf(buf, "PPM:%d", sensorData.concentration);
       OLED_ShowString(0, 0, buf);
       
-      // ÏÔÊ¾Êä³öµçÑ¹
-      sprintf(buf, "µçÑ¹: %.2fV", sensorData.outputVoltage);
+      // ÏÔÊ¾Á¿³ÌÖµ
+      sprintf(buf, "Range:%d", sensorData.rangeValue);
       OLED_ShowString(0, 2, buf);
       
-      // ÏÔÊ¾Êä³öµçÁ÷
-      sprintf(buf, "µçÁ÷: %.2fmA", sensorData.outputCurrent);
+      // ÏÔÊ¾ÁãµãÖµ
+      sprintf(buf, "Zero:%d", sensorData.zeroPoint);
       OLED_ShowString(0, 4, buf);
       
-      // 3. µ÷ÊÔÐÅÏ¢Êä³ö
-      printf("\r\n[%lu ms] ´«¸ÐÆ÷Êý¾Ý¸üÐÂ£º\r\n", HAL_GetTick());
-      printf("Å¨¶È: %d\r\n", sensorData.concentration);
-      printf("Êä³öÖµ: %d\r\n", sensorData.outputValue);
-      printf("µçÑ¹: %.2fV\r\n", sensorData.outputVoltage);
-      printf("µçÁ÷: %.2fmA\r\n", sensorData.outputCurrent);
-    }
-    else
-    {
-      // Êý¾Ý¸üÐÂÊ§°Ü£¬ÏÔÊ¾´íÎóÐÅÏ¢
-      printf("\r\n[%lu ms] ´íÎó£º%s\r\n", HAL_GetTick(), Sensor_GetErrorString(Sensor_GetLastError()));
+      // ÏÔÊ¾Êä³öÖµ
+      sprintf(buf, "DAC:%d/4095", sensorData.outputValue);
+      OLED_ShowString(0, 6, buf);
       
-      // ÔÚOLEDÉÏÏÔÊ¾´íÎóÐÅÏ¢
+      OLED_Refresh();
+      
+      // 3. µ÷ÊÔÐÅÏ¢Êä³ö
+      printf("\r\n[%lu ms] Sensor Data Update:\r\n", HAL_GetTick());
+      printf("PPM: %d\r\n", sensorData.concentration);
+      printf("Range: %d\r\n", sensorData.rangeValue);
+      printf("Zero: %d\r\n", sensorData.zeroPoint);
+      printf("DAC: %d/4095\r\n", sensorData.outputValue);
+      printf("Voltage: %.2fV\r\n", sensorData.outputVoltage);
+      printf("Current: %.2fmA\r\n", sensorData.outputCurrent);
+    }
+    else {
+      // Èç¹û»ñÈ¡Êý¾ÝÊ§°Ü£¬ÏÔÊ¾´íÎóÐÅÏ¢
       OLED_Clear();
-      OLED_ShowString(0, 0, "Êý¾Ý¸üÐÂÊ§°Ü");
-      OLED_ShowString(0, 2, Sensor_GetErrorString(Sensor_GetLastError()));
+      OLED_ShowString(0, 0, "Read Failed!");
+      OLED_ShowString(0, 2, "Check Sensor");
+      char errStr[16];
+      sprintf(errStr, "Error:%d", Sensor_GetLastError());
+      OLED_ShowString(0, 4, errStr);
+      OLED_Refresh();
+      HAL_Delay(2000);  // ÏÔÊ¾2Ãë´íÎóÐÅÏ¢
     }
     
     HAL_Delay(1000);  // Ã¿Ãë¸üÐÂÒ»´ÎÊý¾Ý
