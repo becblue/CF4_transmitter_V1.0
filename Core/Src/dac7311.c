@@ -14,15 +14,26 @@
 /* 鍖呭惈澶存枃浠? */
 #include "dac7311.h"
 #include "main.h"
+#include "stdio.h"  // 添加printf支持
 
 /* 私有变量定义 */
 static SPI_HandleTypeDef* dac_spi;  // SPI句柄
 static GPIO_TypeDef* cs_port;       // 片选端口
 static uint16_t cs_pin;             // 片选引脚
 
+// 用于调试输出的宏定义
+#define DEBUG_DAC7311 1  // 设置为1启用调试输出，设置为0禁用
+
+#if DEBUG_DAC7311
+#define DAC_DEBUG(format, ...) printf("[DAC7311] " format "\r\n", ##__VA_ARGS__)
+#else
+#define DAC_DEBUG(format, ...)
+#endif
+
 // 私有函数声明
-static void DAC7311_Write16Bits(uint16_t data);  // 写入16位数据
+static uint8_t DAC7311_Write16Bits(uint16_t data);  // 写入16位数据
 static void DAC7311_Delay(void);                 // 简单延时
+static void DAC7311_DelayNs(uint32_t ns);           // 基于系统时钟的精确延时
 
 /**
   * @brief  初始化DAC7311
@@ -50,6 +61,7 @@ uint8_t DAC7311_Init(void)
 uint8_t DAC7311_SetValue(uint16_t value)
 {
     uint16_t data;
+    uint8_t status;
     
     // 限制输入范围
     if(value > 4095) {
@@ -57,21 +69,31 @@ uint8_t DAC7311_SetValue(uint16_t value)
     }
     
     // 构造16位数据帧
-    // [15:14]: PD1,PD0 = 00 (正常工作模式)
-    // [13:12]: 保留位 = 00
-    // [11:0]: 12位DAC数据
-    data = (uint16_t)(value & 0x0FFF);  // 取低12位
+    data = (uint16_t)(value & 0x0FFF);
+    
+    DAC_DEBUG("开始传输数据: 0x%04X (值: %d)", data, value);
     
     // 开始传输
-    DAC_SYNC_LOW();   // 拉低SYNC，开始传输
-    DAC7311_Delay();  // 短延时
+    DAC_SYNC_LOW();          // 拉低SYNC，开始传输
+    DAC_DEBUG("SYNC拉低 -> 开始传输");
+    DAC7311_DelayNs(20);    // tSYNC ≥ 20ns
     
     // 发送16位数据
-    DAC7311_Write16Bits(data);
+    status = DAC7311_Write16Bits(data);
+    if(status != 0) {
+        DAC_SYNC_HIGH();
+        DAC_DEBUG("传输失败！SYNC提前拉高或数据不完整");
+        return 1;  // 传输失败
+    }
     
     // 结束传输
-    DAC7311_Delay();  // 短延时
-    DAC_SYNC_HIGH();  // 拉高SYNC，结束传输
+    DAC7311_DelayNs(20);    // tSYNCH ≥ 20ns
+    DAC_SYNC_HIGH();        // 拉高SYNC，更新输出
+    DAC_DEBUG("SYNC拉高 -> 传输完成");
+    
+    // 等待DAC更新完成
+    DAC7311_DelayNs(8000);  // 转换时间 ≈ 8μs
+    DAC_DEBUG("DAC更新完成，输出值设置为: %d", value);
     
     return 0;
 }
@@ -107,33 +129,80 @@ void DAC7311_PowerUp(void)
 }
 
 /**
-  * @brief  写入16位数据
-  * @param  data: 要写入的16位数据
+  * @brief  基于系统时钟的精确延时
+  * @param  ns: 需要延时的纳秒数
   * @retval None
   */
-static void DAC7311_Write16Bits(uint16_t data)
+static void DAC7311_DelayNs(uint32_t ns)
+{
+    uint32_t cycles = (SystemCoreClock / 1000000) * ns / 1000;
+    while(cycles--) {
+        __NOP();
+    }
+}
+
+/**
+  * @brief  写入16位数据
+  * @param  data: 要写入的16位数据
+  * @retval 0: 成功, 1: 失败
+  */
+static uint8_t DAC7311_Write16Bits(uint16_t data)
 {
     uint8_t i;
+    uint8_t bit_count = 0;
+    uint16_t data_temp = data;  // 保存原始数据用于调试输出
+    
+    // 确保CLK初始为低
+    DAC_CLK_LOW();
+    DAC_DEBUG("CLK初始化为低电平");
+    DAC7311_DelayNs(10);  // tCL ≥ 10ns
+    
+    DAC_DEBUG("开始发送16位数据: 0x%04X", data);
     
     // 从最高位开始发送
     for(i = 0; i < 16; i++) {
-        DAC_CLK_LOW();  // CLK低电平
-        
         // 设置数据位
         if(data & 0x8000) {
-            DAC_DIN_HIGH();  // 发送1
+            DAC_DIN_HIGH();
+            DAC_DEBUG("位%2d: DIN=1 [CLK=L]", 15-i);
         } else {
-            DAC_DIN_LOW();   // 发送0
+            DAC_DIN_LOW();
+            DAC_DEBUG("位%2d: DIN=0 [CLK=L]", 15-i);
         }
         
-        DAC7311_Delay();  // 建立时间
-        DAC_CLK_HIGH();   // CLK上升沿，数据锁存
-        DAC7311_Delay();  // 保持时间
+        DAC7311_DelayNs(5);   // tDS ≥ 5ns（数据建立时间）
         
-        data <<= 1;  // 左移一位，准备发送下一位
+        DAC_CLK_HIGH();       // CLK上升沿，锁存数据
+        DAC_DEBUG("CLK上升沿 -> 锁存数据");
+        DAC7311_DelayNs(10);  // tCH ≥ 10ns
+        
+        // 检查SYNC是否被提前拉高
+        if(HAL_GPIO_ReadPin(DAC_GPIO_PORT, DAC_SYNC_PIN) == GPIO_PIN_SET) {
+            DAC_DEBUG("错误：SYNC提前拉高！在位%d处中断", 15-i);
+            return 1;  // 传输失败
+        }
+        
+        DAC_CLK_LOW();        // CLK下降沿
+        DAC_DEBUG("CLK下降沿 -> 准备下一位");
+        DAC7311_DelayNs(10);  // tCL ≥ 10ns
+        
+        data <<= 1;
+        bit_count++;
     }
     
-    DAC_CLK_LOW();  // 传输结束，CLK回到低电平
+    // 输出完整的传输摘要
+    DAC_DEBUG("传输完成: 发送了%d位", bit_count);
+    DAC_DEBUG("数据帧详情:");
+    DAC_DEBUG("  - 电源模式[15:14]: %d%d", 
+              (data_temp >> 15) & 0x01, 
+              (data_temp >> 14) & 0x01);
+    DAC_DEBUG("  - 保留位[13:12]: %d%d", 
+              (data_temp >> 13) & 0x01, 
+              (data_temp >> 12) & 0x01);
+    DAC_DEBUG("  - DAC数据[11:0]: 0x%03X", 
+              data_temp & 0x0FFF);
+    
+    return (bit_count == 16) ? 0 : 1;
 }
 
 /**
