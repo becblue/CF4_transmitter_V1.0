@@ -65,8 +65,8 @@ static OLED_DirtyFlag_t oledDirtyFlag;  // 脏区标记
 static I2C_HandleTypeDef *oled_hi2c;    // I2C句柄
 
 /* 私有函数原型 --------------------------------------------------------------*/
-static void OLED_WriteCmd(uint8_t cmd);
-static void OLED_WriteData(uint8_t data);
+static uint8_t OLED_WriteCmd(uint8_t command);
+static uint8_t OLED_WriteData(uint8_t data);
 static void OLED_SetPosition(uint8_t x, uint8_t y);
 static void OLED_MarkDirty(uint8_t page);
 static void OLED_DrawChar(uint8_t x, uint8_t y, char chr);
@@ -80,8 +80,6 @@ static void OLED_DrawChar(uint8_t x, uint8_t y, char chr);
   */
 uint8_t OLED_Init(I2C_HandleTypeDef *hi2c)
 {
-    HAL_StatusTypeDef status;
-    
     oled_hi2c = hi2c;  // 保存I2C句柄
     
     // 初始化显示缓冲区和脏区标记
@@ -95,7 +93,9 @@ uint8_t OLED_Init(I2C_HandleTypeDef *hi2c)
     /* 发送初始化命令序列 */
     for(uint8_t i = 0; i < sizeof(OLED_Init_CMD); i++)
     {
-        OLED_WriteCmd(OLED_Init_CMD[i]);
+        if (OLED_WriteCmd(OLED_Init_CMD[i]) != 0) {  // 如果写入命令失败
+            return 1;  // 返回错误
+        }
         HAL_Delay(1);  // 每条命令后添加短暂延时
     }
     
@@ -587,29 +587,43 @@ static void OLED_DrawChar(uint8_t x, uint8_t y, char chr)
 }
 
 /**
-  * @brief  向OLED写入命令
-  * @param  cmd: 要写入的命令
-  * @retval 无
-  */
-static void OLED_WriteCmd(uint8_t cmd)
+ * @brief  向OLED写入命令
+ * @param  command: 要写入的命令
+ * @retval 0: 成功, 1: 失败
+ */
+uint8_t OLED_WriteCmd(uint8_t command)
 {
-    uint8_t data[2];
-    data[0] = OLED_CMD;    // 写命令
-    data[1] = cmd;
-    HAL_I2C_Master_Transmit(oled_hi2c, OLED_ADDR, data, 2, 0xFF);
+    uint8_t data[2];                // 定义数据缓冲区
+    data[0] = OLED_CMD;            // 第一个字节表示写命令
+    data[1] = command;             // 第二个字节是具体的命令值
+    
+    // 通过I2C发送命令，超时时间设置为100ms
+    if (HAL_I2C_Master_Transmit(oled_hi2c, OLED_ADDR, data, 2, 100) != HAL_OK)
+    {
+        return 1;                   // 发送失败返回1
+    }
+    
+    return 0;                       // 发送成功返回0
 }
 
 /**
-  * @brief  向OLED写入数据
-  * @param  data: 要写入的数据
-  * @retval 无
-  */
-static void OLED_WriteData(uint8_t data)
+ * @brief  向OLED写入数据
+ * @param  data: 要写入的数据
+ * @retval 0: 成功, 1: 失败
+ */
+uint8_t OLED_WriteData(uint8_t data)
 {
-    uint8_t buf[2];
-    buf[0] = OLED_DATA;   // 写数据
-    buf[1] = data;
-    HAL_I2C_Master_Transmit(oled_hi2c, OLED_ADDR, buf, 2, 0xFF);
+    uint8_t buf[2];                // 定义数据缓冲区
+    buf[0] = OLED_DATA;           // 第一个字节表示写数据
+    buf[1] = data;                // 第二个字节是具体的数据值
+    
+    // 通过I2C发送数据，超时时间设置为100ms
+    if (HAL_I2C_Master_Transmit(oled_hi2c, OLED_ADDR, buf, 2, 100) != HAL_OK)
+    {
+        return 1;                  // 发送失败返回1
+    }
+    
+    return 0;                      // 发送成功返回0
 }
 
 

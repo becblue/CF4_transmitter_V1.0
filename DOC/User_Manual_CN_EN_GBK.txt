@@ -1,0 +1,130 @@
+# CF4 Gas Concentration Detection System User Manual
+# CF4四氟化碳气体浓度检测系统使用说明书
+
+## I. Product Overview / 一、产品概述
+
+### 1.1 Product Introduction / 产品简介
+This product is a professional CF4 gas concentration detection system.
+本产品是一款专业的CF4气体浓度检测系统。
+
+### 1.2 Main Features / 主要特点
+- Real-time CF4 gas detection / 实时检测CF4气体
+- 12-bit DAC output (0-3.3V) / 12位DAC输出(0-3.3V)
+- LED status indication / LED状态指示
+- OLED display / OLED显示
+- Fault detection / 故障检测
+
+### 1.3 Technical Parameters / 技术参数
+- Operating voltage / 工作电压: 5V DC
+- Output signal / 输出信号: 0-3.3V
+- Display / 显示方式: OLED
+- Response time / 响应时间: ≤500ms
+- Operating temperature / 工作温度: -10℃～50℃
+- Operating humidity / 工作湿度: ≤95%RH
+
+## II. Installation / 二、安装说明
+
+### 2.1 Package Contents / 开箱检查
+- Main device / 主机设备 × 1
+- User manual / 使用说明书 × 1
+- Certificate / 合格证 × 1
+- Power adapter / 电源适配器 × 1
+
+### 2.2 Wiring / 接线说明
+1. Power interface / 电源接口:
+   - VCC: 5V positive / 5V电源正极
+   - GND: Power ground / 电源地
+
+2. Signal output / 信号输出:
+   - VOUT: 0-3.3V analog output / 模拟量输出
+   - GND: Signal ground / 信号地
+
+## III. Operation / 三、使用说明
+
+### 3.1 Start-up Process / 开机流程
+1. Initialization (1s) / 初始化阶段(1秒):
+   - LED1: Flashing (100ms) / LED1闪烁(100ms)
+   - LED2: Off / LED2熄灭
+   - OLED: Shows init info / 显示初始化信息
+
+2. Warm-up (3s) / 预热阶段(3秒):
+   - LED1: Steady on / LED1常亮
+   - LED2: Flashing (100ms) / LED2闪烁
+   - OLED: Shows countdown / 显示倒计时
+
+3. Working / 工作阶段:
+   - LED1: Steady on / LED1常亮
+   - LED2: Updates with data / LED2随数据更新
+   - OLED: Real-time data / 实时数据显示
+
+### 3.2 Display Guide / 显示说明
+OLED shows / OLED显示:
+- Gas concentration / 气体浓度 (PPM)
+- Range value / 量程值
+- Zero point / 零点值
+- Output value / 输出值 (0-4095)
+
+### 3.3 LED Indicators / LED指示
+LED1 (System status / 系统状态):
+- Initialization / 初始化: Flashing / 闪烁
+- Warm-up / 预热: Steady on / 常亮
+- Working / 工作: Steady on / 常亮
+
+LED2 (Working status / 工作状态):
+- Initialization / 初始化: Off / 熄灭
+- Warm-up / 预热: Flashing / 闪烁
+- Working / 工作: 200ms on after update / 更新后亮200ms
+
+## IV. Precautions / 四、注意事项
+
+### 4.1 Installation / 安装注意事项
+1. Good ventilation / 通风良好
+2. Avoid high temperature / 避免高温
+3. Away from EMI / 远离电磁干扰
+4. Correct wiring / 正确接线
+
+### 4.2 Operation / 使用注意事项
+1. Wait for warm-up / 等待预热
+2. Check wiring regularly / 定期检查接线
+3. Keep vents clean / 保持通风
+4. Check readings / 检查读数
+
+## V. Troubleshooting / 五、故障排除
+
+### 5.1 Common Issues / 常见故障
+1. No power / 无法开机:
+   - Check power connection / 检查电源连接
+   - Check voltage / 检查电压
+
+2. Display issues / 显示异常:
+   - Check OLED connection / 检查OLED连接
+   - Restart device / 重启设备
+
+3. Output issues / 输出异常:
+   - Check wiring / 检查接线
+   - Check output port / 检查输出端口
+
+### 5.2 Error States / 错误状态
+When LEDs flash together / LED同时闪烁:
+- System error / 系统错误
+- Record error code / 记录错误代码
+- Contact support / 联系技术支持
+
+## VI. Contact / 六、联系方式
+
+Technical Support / 技术支持:
+- Hotline / 热线: [Phone / 电话]
+- Email / 邮箱: [Email / 邮箱]
+- Website / 网址: [URL / 网址]
+
+## VII. Warranty / 七、保修说明
+
+Warranty period / 保修期: 12 months / 12个月
+Not covered / 非保修:
+- Human damage / 人为损坏
+- Misuse / 使用不当
+- Unauthorized repair / 自行拆修
+
+---
+The final interpretation right belongs to [Company name]
+最终解释权归[公司名称]所有

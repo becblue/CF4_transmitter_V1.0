@@ -30,9 +30,10 @@ uint8_t Sensor_UpdateAllData(SensorData_t *data);
 void Sensor_SetOutput(uint16_t value);
 uint8_t Sensor_GetLastError(void);
 const char* Sensor_GetErrorString(uint8_t errorCode);
+uint8_t Sensor_CheckConnection(void);  // 添加通信检查函数声明
 
 /* 外部变量声明 */
-extern UART_HandleTypeDef huart2;  // UART2句柄
+extern UART_HandleTypeDef huart3;  // UART3句柄，用于与传感器通信
 
 #endif /* __SENSOR_H */ 
 

@@ -18,17 +18,17 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
-#include "spi.h"
 #include "usart.h"
 #include "gpio.h"
-#include "sensor.h"
-#include "dac7311.h"
-#include "oled.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
+#include "led.h"  // LED控制头文件
+#include "oled.h"  // OLED显示头文件
+#include "sensor.h"  // 传感器相关头文件
+#include "dac7311.h"  // DAC控制头文件
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,9 +38,10 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define SENSOR_UPDATE_INTERVAL   500       // 锟斤拷锟斤拷锟斤拷锟斤拷锟捷革拷锟铰硷拷锟(ms)
-#define DISPLAY_UPDATE_INTERVAL  1000      // 锟斤拷示锟斤拷锟铰硷拷锟(ms)
-#define WARMUP_TIME              3000      // 预锟斤拷时锟斤拷(ms)
+#define SENSOR_UPDATE_INTERVAL   500       // 传感器数据更新间隔(ms)
+#define DISPLAY_UPDATE_INTERVAL  1000      // 显示更新间隔(ms)
+#define WARMUP_TIME              3000      // 预热时间(ms)
+#define DAC_VREF                 3.3f      // DAC参考电压（3.3V）
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -49,23 +50,23 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-extern SPI_HandleTypeDef hspi1;
 
 /* USER CODE BEGIN PV */
-/* 锟斤拷些锟斤拷锟斤拷锟斤拷时未使锟矫ｏ拷锟斤拷锟斤拷锟斤拷要取锟斤拷注锟斤拷
-static SensorData_t sensorData;            // 锟斤拷锟斤拷锟斤拷锟斤拷锟捷结构锟斤拷
-static uint32_t lastSensorUpdateTime = 0;  // 锟较次达拷锟斤拷锟斤拷锟斤拷锟捷革拷锟斤拷时锟斤拷
-static uint32_t lastDisplayUpdateTime = 0;  // 锟较达拷锟斤拷示锟斤拷锟斤拷时锟斤拷
-static uint8_t systemError = 0;            // 系统锟斤拷锟斤拷锟街
-static uint8_t isWarmingUp = 1;            // 预锟饺憋拷志
-static uint32_t warmupStartTime = 0;       // 预锟饺匡拷始时锟斤拷
-static uint8_t systemStatus = 0;           // 系统状态锟斤拷0-锟斤拷锟斤拷锟斤拷, 1-预锟斤拷锟斤拷, 2-锟斤拷锟斤拷锟斤拷锟斤拷, 3-锟斤拷锟斤拷
-*/
+// 传感器相关变量
+static SensorData_t sensorData = {0};       // 传感器数据结构体，初始化为0
+static uint32_t lastSensorUpdateTime = 0;   // 上次传感器数据更新时间
+static uint32_t lastDisplayUpdateTime = 0;   // 上次显示更新时间
+
+// 系统状态相关变量
+static uint32_t warmupStartTime = 0;        // 预热开始时间
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+
 /* USER CODE BEGIN PFP */
+// 函数声明
+static void UpdateDisplay(SensorData_t *data);  // 显示更新函数声明
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -101,39 +102,50 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_I2C1_Init();
-  MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
+  MX_GPIO_Init();  // 初始化所有GPIO
+  MX_I2C1_Init();  // 初始化I2C1，用于OLED显示
+  MX_USART1_UART_Init();  // 初始化USART1，用于调试输出
+  MX_USART3_UART_Init();  // 初始化USART3，用于传感器通信
   /* USER CODE BEGIN 2 */
+  // 初始化LED
+  LED_Init();  // 初始化LED控制模块
+  LED_UpdateState(SYSTEM_INIT);  // 设置LED为初始化状态，LED1闪烁，LED2熄灭
+  
+  // 记录预热开始时间
+  warmupStartTime = HAL_GetTick();  // 记录预热开始时间
+  
   // 初始化OLED显示
   printf("初始化OLED...\r\n");
   if(OLED_Init(&hi2c1) != 0) {
     printf("OLED初始化失败!\r\n");
-    Error_Handler();
+    LED_UpdateState(SYSTEM_ERROR);  // 设置LED为错误状态
+    while(1) {  // 停留在错误状态
+      LED_UpdateState(SYSTEM_ERROR);  // 保持LED错误状态显示
+      HAL_Delay(10);  // 小延时，避免CPU占用过高
+    }
   }
-  printf("OLED初始化成功\r\n");
-  
-  OLED_Clear();
-  OLED_ShowString(0, 0, "System Starting...");
-  OLED_Refresh();
-  printf("OLED显示启动信息\r\n");
+  printf("OLED初始化完成\r\n");
   
   // 初始化DAC7311
+  printf("初始化DAC7311...\r\n");
   if (DAC7311_Init() != 0) {
-    // DAC初始化失败
+    printf("DAC7311初始化失败!\r\n");
+    LED_UpdateState(SYSTEM_ERROR);  // 设置LED为错误状态
     OLED_Clear();
     OLED_ShowString(0, 0, "DAC Init Failed!");
     OLED_Refresh();
-    Error_Handler();
+    while(1) {  // 停留在错误状态
+      LED_UpdateState(SYSTEM_ERROR);  // 保持LED错误状态显示
+      HAL_Delay(10);  // 小延时，避免CPU占用过高
+    }
   }
+  printf("DAC7311初始化完成\r\n");
   
   // 初始化传感器
-  OLED_Clear();
-  OLED_ShowString(0, 0, "Warming Up...");
-  OLED_Refresh();
+  printf("初始化传感器...\r\n");
   if (Sensor_Init() != 0) {
-    // 初始化失败
+    printf("传感器初始化失败! 错误代码: %d\r\n", Sensor_GetLastError());
+    LED_UpdateState(SYSTEM_ERROR);  // 设置LED为错误状态
     OLED_Clear();
     OLED_ShowString(0, 0, "Sensor Error!");
     OLED_ShowString(0, 1, "Code: ");
@@ -141,11 +153,45 @@ int main(void)
     sprintf(errStr, "%d", Sensor_GetLastError());
     OLED_ShowString(42, 1, errStr);
     OLED_Refresh();
-    HAL_Delay(2000); // 显示2秒错误信息
+    while(1) {  // 停留在错误状态
+      LED_UpdateState(SYSTEM_ERROR);  // 保持LED错误状态显示
+      HAL_Delay(10);  // 小延时，避免CPU占用过高
+    }
   }
+  printf("传感器初始化完成\r\n");
+  
+  // 在初始化阶段保持LED状态更新
+  uint32_t currentTime = HAL_GetTick();
+  printf("开始初始化阶段检查...\r\n");
+  while(currentTime - warmupStartTime < 1000)  // 初始化阶段持续1秒
+  {
+    // 只检查传感器通信状态，使用05指令
+    printf("检查传感器通信...\r\n");
+    if (Sensor_CheckConnection() != 0)  // 只检查通信状态
+    {
+      printf("传感器通信失败!\r\n");
+      LED_UpdateState(SYSTEM_ERROR);  // 设置LED为错误状态
+      OLED_Clear();
+      OLED_ShowString(0, 0, "Sensor Error!");
+      OLED_ShowString(0, 2, "Init Failed!");
+      OLED_Refresh();
+      while(1) {  // 停留在错误状态
+        LED_UpdateState(SYSTEM_ERROR);  // 保持LED错误状态显示
+        HAL_Delay(10);  // 小延时，避免CPU占用过高
+      }
+    }
+    printf("传感器通信正常\r\n");
+    LED_UpdateState(SYSTEM_INIT);  // LED1闪烁，LED2熄灭
+    currentTime = HAL_GetTick();
+    HAL_Delay(100);  // 添加延时，避免过于频繁的通信
+  }
+  printf("初始化阶段检查完成\r\n");
+  
+  // 进入预热阶段
+  LED_UpdateState(SYSTEM_WARMUP);  // 切换到预热状态，LED1常亮，LED2闪烁
   
   // 系统预热
-  uint8_t warmupSeconds = 3; // 预预热时间3秒
+  uint8_t warmupSeconds = 3; // 预热时间3秒
   for (uint8_t i = 0; i < warmupSeconds; i++) {
     OLED_Clear();
     OLED_ShowString(0, 0, "Warming Up...");
@@ -153,12 +199,38 @@ int main(void)
     sprintf(timeStr, "Wait %ds", warmupSeconds - i);  // 显示剩余时间
     OLED_ShowString(0, 2, timeStr);
     OLED_Refresh();
-    HAL_Delay(1000); // 等待1秒
+    
+    // 在每秒开始时只检查传感器通信状态
+    if (Sensor_CheckConnection() != 0)  // 只检查通信状态
+    {
+        LED_UpdateState(SYSTEM_ERROR);  // 设置LED为错误状态
+        OLED_Clear();
+        OLED_ShowString(0, 0, "Sensor Error!");
+        OLED_ShowString(0, 2, "Warmup Failed!");
+        OLED_Refresh();
+        while(1) {  // 停留在错误状态
+            LED_UpdateState(SYSTEM_ERROR);  // 保持LED错误状态显示
+            HAL_Delay(10);  // 小延时，避免CPU占用过高
+        }
+    }
+    
+    // 在这一秒内只更新LED状态，不进行任何传感器查询
+    uint32_t startTick = HAL_GetTick();
+    while(HAL_GetTick() - startTick < 1000)  // 持续1秒
+    {
+        LED_UpdateState(SYSTEM_WARMUP);  // LED1常亮，LED2闪烁
+        HAL_Delay(100);  // 每100ms更新一次LED状态
+    }
   }
   
-  // 预热完成后直接开始显示数据
-  SensorData_t sensorData;  // 定义传感器数据结构体
-  if (Sensor_UpdateAllData(&sensorData) == 0)  // 获取初始数据
+  // 预热结束，进入工作状态
+  LED_UpdateState(SYSTEM_WORKING);  // 切换到工作状态，LED1常亮，LED2由DAC更新控制
+  
+  // 预热完成后的第一次数据获取
+  HAL_Delay(100);  // 短暂延时，确保传感器完全就绪
+  
+  // 获取初始传感器数据
+  if (Sensor_UpdateAllData(&sensorData) == 0)
   {
     OLED_Clear();
     char buf[32];
@@ -175,82 +247,90 @@ int main(void)
     sprintf(buf, "Zero:%d", sensorData.zeroPoint);
     OLED_ShowString(0, 4, buf);
     
-    // 显示输出值
+    // 显示DAC输出值
     sprintf(buf, "DAC:%d/4095", sensorData.outputValue);
     OLED_ShowString(0, 6, buf);
     
     OLED_Refresh();
   }
-  else {
-    // 如果获取数据失败，显示错误信息
-    OLED_Clear();
-    OLED_ShowString(0, 0, "Read Failed!");
-    OLED_ShowString(0, 2, "Check Sensor");
-    char errStr[16];
-    sprintf(errStr, "Error:%d", Sensor_GetLastError());
-    OLED_ShowString(0, 4, errStr);
-    OLED_Refresh();
-    HAL_Delay(2000);  // 显示2秒错误信息
-  }
-  
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-    // 1. 传感器数据采集处理
-    if (Sensor_UpdateAllData(&sensorData) == 0)  // 尝试更新所有传感器数据
+    uint32_t currentTime = HAL_GetTick();
+    static uint8_t errorCount = 0;  // 错误计数器
+    static uint8_t isInErrorState = 0;  // 错误状态标志
+    
+    // 检查是否需要更新传感器数据
+    if (currentTime - lastSensorUpdateTime >= SENSOR_UPDATE_INTERVAL)
     {
-      // 2. 数据处理和显示部分
-      OLED_Clear();  // 清屏
-      char buf[32];
-      
-      // 显示浓度值
-      sprintf(buf, "PPM:%d", sensorData.concentration);
-      OLED_ShowString(0, 0, buf);
-      
-      // 显示量程值
-      sprintf(buf, "Range:%d", sensorData.rangeValue);
-      OLED_ShowString(0, 2, buf);
-      
-      // 显示零点值
-      sprintf(buf, "Zero:%d", sensorData.zeroPoint);
-      OLED_ShowString(0, 4, buf);
-      
-      // 显示输出值
-      sprintf(buf, "DAC:%d/4095", sensorData.outputValue);
-      OLED_ShowString(0, 6, buf);
-      
-      OLED_Refresh();
-      
-      // 3. 调试信息输出
-      printf("\r\n[%lu ms] Sensor Data Update:\r\n", HAL_GetTick());
-      printf("PPM: %d\r\n", sensorData.concentration);
-      printf("Range: %d\r\n", sensorData.rangeValue);
-      printf("Zero: %d\r\n", sensorData.zeroPoint);
-      printf("DAC: %d/4095\r\n", sensorData.outputValue);
-      printf("Voltage: %.2fV\r\n", sensorData.outputVoltage);
-      printf("Current: %.2fmA\r\n", sensorData.outputCurrent);
-    }
-    else {
-      // 如果获取数据失败，显示错误信息
-      OLED_Clear();
-      OLED_ShowString(0, 0, "Read Failed!");
-      OLED_ShowString(0, 2, "Check Sensor");
-      char errStr[16];
-      sprintf(errStr, "Error:%d", Sensor_GetLastError());
-      OLED_ShowString(0, 4, errStr);
-      OLED_Refresh();
-      HAL_Delay(2000);  // 显示2秒错误信息
+      if (Sensor_UpdateAllData(&sensorData) == 0)  // 传感器通信成功
+      {
+        errorCount = 0;  // 清除错误计数
+        if (isInErrorState)  // 如果之前处于错误状态
+        {
+          isInErrorState = 0;  // 清除错误状态
+          LED_UpdateState(SYSTEM_WORKING);  // 恢复到工作状态
+          
+          // 恢复正常显示
+          OLED_Clear();
+          UpdateDisplay(&sensorData);
+        }
+        
+        // 更新DAC输出
+        DAC7311_SetVoltage((float)sensorData.outputValue * DAC_VREF / 4095.0f, DAC_VREF);
+        if (!isInErrorState)  // 只在非错误状态下更新LED2
+        {
+          LED_HandleDAC7311Update();  // 更新LED2状态
+        }
+      }
+      else  // 传感器通信失败
+      {
+        errorCount++;  // 增加错误计数
+        if (errorCount >= 3)  // 连续3次通信失败
+        {
+          if (!isInErrorState)  // 如果还未处于错误状态
+          {
+            isInErrorState = 1;  // 设置错误状态标志
+            LED_UpdateState(SYSTEM_ERROR);  // 切换到错误状态
+            
+            // 显示错误信息
+            OLED_Clear();
+            OLED_ShowString(0, 0, "Sensor Error!");
+            OLED_ShowString(0, 2, "Check Connection");
+            OLED_Refresh();
+          }
+          LED_UpdateState(SYSTEM_ERROR);  // 保持错误状态的LED显示
+        }
+      }
+      lastSensorUpdateTime = currentTime;
     }
     
-    HAL_Delay(1000);  // 每秒更新一次数据
+    // 只在非错误状态下更新显示和LED状态
+    if (!isInErrorState)
+    {
+      // 更新显示
+      if (currentTime - lastDisplayUpdateTime >= DISPLAY_UPDATE_INTERVAL)
+      {
+        UpdateDisplay(&sensorData);
+        lastDisplayUpdateTime = currentTime;
+      }
+      
+      // 更新LED状态
+      LED_UpdateState(SYSTEM_WORKING);
+    }
+    else
+    {
+      // 在错误状态下保持LED错误显示
+      LED_UpdateState(SYSTEM_ERROR);
+    }
   }
-  /* USER CODE END 3 */
+  /* USER CODE END WHILE */
+
+  /* USER CODE BEGIN 3 */
 }
 
 /**
@@ -322,8 +402,41 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* 锟矫伙拷锟斤拷锟斤拷锟斤拷锟斤拷约锟斤拷锟绞碉拷锟斤拷锟斤拷锟斤拷锟斤拷募锟斤拷锟斤拷锟斤拷泻牛锟?
+  /* 锟矫伙拷锟斤拷锟斤拷锟斤拷锟斤拷约锟斤拷锟绞碉拷锟斤拷锟斤拷锟斤拷锟斤拷募锟斤拷锟斤拷锟斤拷泻牛锟??
      锟斤拷锟界：printf("锟斤拷锟斤拷锟斤拷锟斤拷值锟斤拷锟侥硷拷%s锟斤拷锟斤拷%d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
+/**
+  * @brief  更新显示内容
+  * @param  data: 传感器数据结构体指针
+  * @retval None
+  */
+static void UpdateDisplay(SensorData_t *data)
+{
+    if (data == NULL) {  // 检查参数有效性
+        return;
+    }
+    
+    OLED_Clear();  // 清除显示
+    char buf[32];   // 显示缓冲区
+    
+    // 显示浓度值
+    sprintf(buf, "PPM:%d", data->concentration);
+    OLED_ShowString(0, 0, buf);
+    
+    // 显示量程值
+    sprintf(buf, "Range:%d", data->rangeValue);
+    OLED_ShowString(0, 2, buf);
+    
+    // 显示零点值
+    sprintf(buf, "Zero:%d", data->zeroPoint);
+    OLED_ShowString(0, 4, buf);
+    
+    // 显示DAC输出值
+    sprintf(buf, "DAC:%d/4095", data->outputValue);
+    OLED_ShowString(0, 6, buf);
+    
+    OLED_Refresh();  // 刷新显示
+}

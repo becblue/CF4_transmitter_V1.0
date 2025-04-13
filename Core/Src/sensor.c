@@ -396,14 +396,14 @@ static uint8_t Sensor_SendCommand(uint8_t cmd, uint8_t *data, uint8_t dataLen)
     memset(rxBuffer, 0, SENSOR_BUFFER_SIZE);  // 在接收前清空全局rxBuffer
     
     // 发送数据
-    if(HAL_UART_Transmit(&huart2, txBuffer, 10, 500) != HAL_OK) {
+    if(HAL_UART_Transmit(&huart3, txBuffer, 10, 500) != HAL_OK) {  // 使用UART3发送数据，超时时间500ms
         printf("[错误] 发送失败\r\n");
         lastError = SENSOR_ERROR_TRANSMIT;
         return 1;
     }
     
     // 等待接收数据，使用全局rxBuffer
-    HAL_StatusTypeDef rcvStatus = HAL_UART_Receive(&huart2, rxBuffer, 10, 1000);
+    HAL_StatusTypeDef rcvStatus = HAL_UART_Receive(&huart3, rxBuffer, 10, 1000);  // 使用UART3接收数据，超时时间1000ms
     
     // 打印接收状态和数据
     printf("[接收] ");
@@ -643,5 +643,36 @@ const char* Sensor_GetErrorString(uint8_t errorCode)
     default:
       return "未知错误";  // 未知错误代码
   }
+}
+
+/**
+  * @brief  检查传感器通信状态
+  * @retval 0: 通信正常, 1: 通信失败
+  */
+uint8_t Sensor_CheckConnection(void)
+{
+    uint8_t retry = 0;  // 重试计数器
+    
+    // 使用重试机制检查通信
+    while (retry < SENSOR_MAX_RETRY) {
+        // 发送读取零点命令（用05指令检查通信）
+        if (Sensor_SendCommand(SENSOR_CMD_READ_ZERO, NULL, 0) == 0) {
+            // 解析响应数据
+            uint32_t response = Sensor_ParseResponse();
+            
+            // 只要能收到正确的响应就表示通信正常
+            if (response != 0xFFFFFFFF) {
+                lastError = SENSOR_ERROR_NONE;  // 清除错误状态
+                return 0;  // 通信正常
+            }
+        }
+        
+        retry++;  // 增加重试计数
+        HAL_Delay(SENSOR_RETRY_DELAY);  // 延时一段时间后重试
+    }
+    
+    // 全部重试失败
+    lastError = SENSOR_ERROR_TIMEOUT;  // 设置超时错误
+    return 1;  // 通信失败
 } 
 

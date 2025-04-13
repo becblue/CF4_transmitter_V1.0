@@ -34,22 +34,22 @@ extern "C" {
 
 extern UART_HandleTypeDef huart1;
 
-extern UART_HandleTypeDef huart2;
+extern UART_HandleTypeDef huart3;
 
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
 
 void MX_USART1_UART_Init(void);
-void MX_USART2_UART_Init(void);
+void MX_USART3_UART_Init(void);
 
 /* USER CODE BEGIN Prototypes */
 /* ���������غ��� */
 void USART1_Printf(const char* format, ...);  // ͨ��USART1���͸�ʽ��������Ϣ
 
-/* �ķ���̼������ͨ����غ��� */
-HAL_StatusTypeDef USART2_TransmitData(uint8_t *pData, uint16_t Size);  // �������ݵ�������
-HAL_StatusTypeDef USART2_ReceiveData(uint8_t *pData, uint16_t Size);   // �Ӵ�������������
+/* �ķ���̼������ͨ����غ���? */
+HAL_StatusTypeDef USART3_TransmitData(uint8_t *pData, uint16_t Size);  // �������ݵ�������
+HAL_StatusTypeDef USART3_ReceiveData(uint8_t *pData, uint16_t Size);   // �Ӵ���������������
 /* USER CODE END Prototypes */
 
 #ifdef __cplusplus

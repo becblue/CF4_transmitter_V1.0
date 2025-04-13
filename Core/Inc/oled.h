@@ -6,7 +6,7 @@
   * @attention
   *
   * 本文件定义了OLED显示屏的驱动接口和数据结构
-  * 使用I2C1通信，支持脏区更新机制，优化刷新效率
+  * 使用I2C通信，支持脏区更新机制，优化刷新效率
   * 
   ******************************************************************************
   */
@@ -22,19 +22,24 @@ extern "C" {
 /* 包含文件 ------------------------------------------------------------------*/
 #include "main.h"
 #include "i2c.h"
-#include "sensor.h"
 
 /* 显示参数定义 -----------------------------------------------------------*/
 #define OLED_WIDTH      128     // OLED宽度像素
 #define OLED_HEIGHT     64      // OLED高度像素
 #define OLED_PAGE_NUM   8       // OLED页数(每页8个像素)
 
-/* OLED地址 */
+/* OLED地址和命令定义 */
 #define OLED_ADDR       0x78    // OLED从机地址(0x3C<<1)
+#define OLED_CMD        0x00    // 写命令
+#define OLED_DATA       0x40    // 写数据
 
-/* 命令/数据标志 */
-#define OLED_CMD        0x00    // 命令
-#define OLED_DATA       0x40    // 数据
+/* OLED控制引脚定义 */
+#define OLED_DC_GPIO_Port  GPIOB   // DC引脚端口，用于数据/命令选择
+#define OLED_DC_Pin        GPIO_PIN_0   // DC引脚编号
+#define OLED_CS_GPIO_Port  GPIOB   // CS片选引脚端口
+#define OLED_CS_Pin        GPIO_PIN_1   // CS片选引脚编号
+#define OLED_RST_GPIO_Port GPIOB   // RST复位引脚端口
+#define OLED_RST_Pin       GPIO_PIN_2   // RST复位引脚编号
 
 /* 脏区相关定义 */
 #define DIRTY_BLOCK_NUM  8      // 脏区块数量(每页一个)
@@ -149,6 +154,9 @@ void OLED_Display_Off(void);
 void OLED_SetPosition(uint8_t x, uint8_t y);
 void OLED_SetContrast(uint8_t contrast);
 void OLED_RefreshGram(void);
+
+uint8_t OLED_WriteCmd(uint8_t command);  // 写命令，返回0表示成功，1表示失败
+uint8_t OLED_WriteData(uint8_t data);    // 写数据，返回0表示成功，1表示失败
 
 #ifdef __cplusplus
 }

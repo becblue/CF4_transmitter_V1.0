@@ -52,12 +52,6 @@ void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 2 */
 
-  /* I2C1 interrupt Init */
-  HAL_NVIC_SetPriority(I2C1_EV_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
-  
-  HAL_NVIC_SetPriority(I2C1_ER_IRQn, 2, 1);
-  HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef* i2cHandle)

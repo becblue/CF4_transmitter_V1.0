@@ -6,23 +6,22 @@
   ******************************************************************************
   * @attention
   *
-  * DAC7311鏄竴涓?12浣嶆暟瀛?-妯℃嫙杞崲鍣紝閫氳繃SPI鎺ュ彛鎺у埗
+  * DAC7311是一个12位数字-模拟转换器，使用GPIO模拟时序控制
   *
   ******************************************************************************
   */
 
-/* 鍖呭惈澶存枃浠? */
+/* 包含文件 */
 #include "dac7311.h"
+#include "gpio.h"
 #include "main.h"
 #include "stdio.h"  // 添加printf支持
 
 /* 私有变量定义 */
-static SPI_HandleTypeDef* dac_spi;  // SPI句柄
-static GPIO_TypeDef* cs_port;       // 片选端口
-static uint16_t cs_pin;             // 片选引脚
+static uint8_t dac_initialized = 0;  // DAC初始化标志
 
 // 用于调试输出的宏定义
-#define DEBUG_DAC7311 1  // 设置为1启用调试输出，设置为0禁用
+#define DEBUG_DAC7311 0  // 设置为1启用调试输出，设置为0禁用
 
 #if DEBUG_DAC7311
 #define DAC_DEBUG(format, ...) printf("[DAC7311] " format "\r\n", ##__VA_ARGS__)
@@ -32,8 +31,8 @@ static uint16_t cs_pin;             // 片选引脚
 
 // 私有函数声明
 static uint8_t DAC7311_Write16Bits(uint16_t data);  // 写入16位数据
-static void DAC7311_Delay(void);                 // 简单延时
-static void DAC7311_DelayNs(uint32_t ns);           // 基于系统时钟的精确延时
+static void DAC7311_Delay(void);                    // 简单延时
+static void DAC7311_DelayNs(uint32_t ns);          // 基于系统时钟的精确延时
 
 /**
   * @brief  初始化DAC7311
@@ -41,6 +40,10 @@ static void DAC7311_DelayNs(uint32_t ns);           // 基于系统时钟的精确延时
   */
 uint8_t DAC7311_Init(void)
 {
+    if (dac_initialized) {  // 如果已经初始化过
+        return 0;
+    }
+
     // 初始状态设置
     DAC_CLK_LOW();    // CLK初始为低
     DAC_DIN_LOW();    // DIN初始为低
@@ -50,7 +53,12 @@ uint8_t DAC7311_Init(void)
     HAL_Delay(10);
     
     // 发送上电复位值（设置输出为0）
-    return DAC7311_SetValue(0);
+    if (DAC7311_SetValue(0) != 0) {
+        return 1;
+    }
+
+    dac_initialized = 1;  // 标记初始化完成
+    return 0;
 }
 
 /**
@@ -61,7 +69,6 @@ uint8_t DAC7311_Init(void)
 uint8_t DAC7311_SetValue(uint16_t value)
 {
     uint16_t data;
-    uint8_t status;
     
     // 限制输入范围
     if(value > 4095) {
@@ -69,7 +76,7 @@ uint8_t DAC7311_SetValue(uint16_t value)
     }
     
     // 构造16位数据帧
-    data = (uint16_t)(value & 0x0FFF);
+    data = (uint16_t)(value & 0x0FFF);  // 保留低12位
     
     DAC_DEBUG("开始传输数据: 0x%04X (值: %d)", data, value);
     
@@ -79,8 +86,7 @@ uint8_t DAC7311_SetValue(uint16_t value)
     DAC7311_DelayNs(20);    // tSYNC ≥ 20ns
     
     // 发送16位数据
-    status = DAC7311_Write16Bits(data);
-    if(status != 0) {
+    if (DAC7311_Write16Bits(data) != 0) {
         DAC_SYNC_HIGH();
         DAC_DEBUG("传输失败！SYNC提前拉高或数据不完整");
         return 1;  // 传输失败
@@ -129,19 +135,6 @@ void DAC7311_PowerUp(void)
 }
 
 /**
-  * @brief  基于系统时钟的精确延时
-  * @param  ns: 需要延时的纳秒数
-  * @retval None
-  */
-static void DAC7311_DelayNs(uint32_t ns)
-{
-    uint32_t cycles = (SystemCoreClock / 1000000) * ns / 1000;
-    while(cycles--) {
-        __NOP();
-    }
-}
-
-/**
   * @brief  写入16位数据
   * @param  data: 要写入的16位数据
   * @retval 0: 成功, 1: 失败
@@ -150,7 +143,6 @@ static uint8_t DAC7311_Write16Bits(uint16_t data)
 {
     uint8_t i;
     uint8_t bit_count = 0;
-    uint16_t data_temp = data;  // 保存原始数据用于调试输出
     
     // 确保CLK初始为低
     DAC_CLK_LOW();
@@ -190,19 +182,22 @@ static uint8_t DAC7311_Write16Bits(uint16_t data)
         bit_count++;
     }
     
-    // 输出完整的传输摘要
     DAC_DEBUG("传输完成: 发送了%d位", bit_count);
-    DAC_DEBUG("数据帧详情:");
-    DAC_DEBUG("  - 电源模式[15:14]: %d%d", 
-              (data_temp >> 15) & 0x01, 
-              (data_temp >> 14) & 0x01);
-    DAC_DEBUG("  - 保留位[13:12]: %d%d", 
-              (data_temp >> 13) & 0x01, 
-              (data_temp >> 12) & 0x01);
-    DAC_DEBUG("  - DAC数据[11:0]: 0x%03X", 
-              data_temp & 0x0FFF);
     
     return (bit_count == 16) ? 0 : 1;
+}
+
+/**
+  * @brief  基于系统时钟的精确延时
+  * @param  ns: 需要延时的纳秒数
+  * @retval None
+  */
+static void DAC7311_DelayNs(uint32_t ns)
+{
+    uint32_t cycles = (SystemCoreClock / 1000000) * ns / 1000;
+    while(cycles--) {
+        __NOP();
+    }
 }
 
 /**
@@ -218,51 +213,25 @@ static void DAC7311_Delay(void)
 }
 
 /**
-  * @brief  设置DAC电源模式
-  * @param  mode: 电源模式(见dac7311.h中的宏定义)
-  * @retval uint8_t: 0表示成功，1表示失败
-  */
-uint8_t DAC7311_SetPowerMode(uint8_t mode)
-{
-    uint16_t dac_cmd;
-    HAL_StatusTypeDef status;
-    
-    /* 构建命令字，保持当前DAC值不变 */
-    dac_cmd = (mode << 12);
-    
-    /* 拉低CS开始传输 */
-    HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_RESET);
-    
-    /* 发送数据 */
-    status = HAL_SPI_Transmit(dac_spi, (uint8_t*)&dac_cmd, 2, HAL_MAX_DELAY);
-    
-    /* 拉高CS结束传输 */
-    HAL_GPIO_WritePin(cs_port, cs_pin, GPIO_PIN_SET);
-    
-    return (status == HAL_OK) ? 0 : 1;
-}
-
-/**
-  * @brief  璁剧疆DAC杈撳嚭鐢靛帇
-  * @param  voltage: 鏈熸湜杈撳嚭鐢靛帇(鍗曚綅:浼忕壒)
-  * @param  vref: 鍙傝�冪數鍘?(鍗曚綅:浼忕壒)
-  * @retval 0: 鎴愬姛, 1: 澶辫触
+  * @brief  设置DAC输出电压
+  * @param  voltage: 期望输出电压(单位:伏特)
+  * @param  vref: 参考电压(单位:伏特)
+  * @retval 0: 成功, 1: 失败
   */
 uint8_t DAC7311_SetVoltage(float voltage, float vref)
 {
-  uint16_t dac_value;
-  
-  /* 鍙傛暟妫�鏌? */
-  if (voltage < 0 || voltage > vref)
-  {
-    return 1; // 鐢靛帇瓒呭嚭鑼冨洿
-  }
-  
-  /* 计算DAC数值 */
-  dac_value = (uint16_t)((voltage * 4095) / vref);
-  
-  /* 设置DAC值 */
-  return DAC7311_SetValue(dac_value);
+    uint16_t dac_value;
+    
+    /* 参数检查 */
+    if (voltage < 0 || voltage > vref) {
+        return 1;  // 电压超出范围
+    }
+    
+    /* 计算DAC数值 */
+    dac_value = (uint16_t)((voltage * 4095) / vref);
+    
+    /* 设置DAC值 */
+    return DAC7311_SetValue(dac_value);
 }
 
 

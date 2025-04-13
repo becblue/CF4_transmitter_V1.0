@@ -56,14 +56,14 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define PowerLed_Pin GPIO_PIN_4
-#define PowerLed_GPIO_Port GPIOA
-#define RunLed_Pin GPIO_PIN_5
-#define RunLed_GPIO_Port GPIOA
-#define Key1_Pin GPIO_PIN_6
-#define Key1_GPIO_Port GPIOA
-#define Key2_Pin GPIO_PIN_7
-#define Key2_GPIO_Port GPIOA
+#define KEY2_Pin GPIO_PIN_13
+#define KEY2_GPIO_Port GPIOC
+#define KEY1_Pin GPIO_PIN_0
+#define KEY1_GPIO_Port GPIOA
+#define POWER_Pin GPIO_PIN_1
+#define POWER_GPIO_Port GPIOA
+#define RUN_Pin GPIO_PIN_2
+#define RUN_GPIO_Port GPIOA
 #define DAC1CLK_Pin GPIO_PIN_13
 #define DAC1CLK_GPIO_Port GPIOB
 #define DAC1DIN_Pin GPIO_PIN_14
