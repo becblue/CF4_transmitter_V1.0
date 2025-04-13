@@ -127,19 +127,22 @@ int main(void)
   printf("OLED初始化完成\r\n");
   
   // 初始化DAC7311
-  printf("初始化DAC7311...\r\n");
-  if (DAC7311_Init() != 0) {
-    printf("DAC7311初始化失败!\r\n");
+  printf("初始化DAC7311...\r\n");  // 打印初始化开始信息
+  if (DAC7311_Init() != 0) {  // 初始化DAC7311
+    printf("DAC7311初始化失败!\r\n");  // 打印错误信息
     LED_UpdateState(SYSTEM_ERROR);  // 设置LED为错误状态
-    OLED_Clear();
-    OLED_ShowString(0, 0, "DAC Init Failed!");
-    OLED_Refresh();
+    OLED_Clear();  // 清空OLED显示
+    OLED_ShowString(0, 0, "DAC Init Failed!");  // 显示错误信息
+    OLED_Refresh();  // 刷新OLED显示
     while(1) {  // 停留在错误状态
       LED_UpdateState(SYSTEM_ERROR);  // 保持LED错误状态显示
       HAL_Delay(10);  // 小延时，避免CPU占用过高
     }
   }
-  printf("DAC7311初始化完成\r\n");
+  printf("DAC7311初始化完成\r\n");  // 打印初始化完成信息
+  
+  // 初始化时设置DAC输出为0
+  DAC7311_SetValue(0);  // 设置DAC输出为0
   
   // 初始化传感器
   printf("初始化传感器...\r\n");
@@ -221,6 +224,7 @@ int main(void)
         LED_UpdateState(SYSTEM_WARMUP);  // LED1常亮，LED2闪烁
         HAL_Delay(100);  // 每100ms更新一次LED状态
     }
+    DAC7311_SetValue(0);  // 确保预热阶段DAC输出保持为0
   }
   
   // 预热结束，进入工作状态
@@ -280,7 +284,7 @@ int main(void)
           UpdateDisplay(&sensorData);
         }
         
-        // 更新DAC输出
+        // 更新DAC输出为实际值
         DAC7311_SetVoltage((float)sensorData.outputValue * DAC_VREF / 4095.0f, DAC_VREF);
         if (!isInErrorState)  // 只在非错误状态下更新LED2
         {
@@ -297,11 +301,45 @@ int main(void)
             isInErrorState = 1;  // 设置错误状态标志
             LED_UpdateState(SYSTEM_ERROR);  // 切换到错误状态
             
-            // 显示错误信息
-            OLED_Clear();
+            // 显示错误信息和DAC输出变化信息
+            printf("[错误] 传感器通信失败，DAC输出将渐变至满量程\r\n");
+            printf("[DAC] 当前输出值: %d，目标值: %d\r\n", sensorData.outputValue, DAC7311_FULL_SCALE);
+            
+            // 准备显示内容
+            char dacStr[32];
+            OLED_Clear();  // 清屏
+            
+            // 第一行显示错误信息
+            OLED_ShowString(0, 0, "Sensor Error!");
+            
+            // 第二行显示检查连接提示
+            OLED_ShowString(0, 2, "Check Connection");
+            
+            // 第三行显示当前DAC值
+            sprintf(dacStr, "DAC:%d", sensorData.outputValue);
+            OLED_ShowString(0, 4, dacStr);
+            
+            // 第四行显示目标值
+            sprintf(dacStr, "Target:%d", DAC7311_FULL_SCALE);
+            OLED_ShowString(0, 6, dacStr);
+            
+            // 一次性刷新显示
+            OLED_Refresh();
+            
+            // 渐变DAC输出到满量程
+            DAC7311_RampToValue(DAC7311_FULL_SCALE);
+            
+            // 更新显示最终DAC值
+            OLED_Clear();  // 再次清屏
             OLED_ShowString(0, 0, "Sensor Error!");
             OLED_ShowString(0, 2, "Check Connection");
-            OLED_Refresh();
+            sprintf(dacStr, "DAC Output:");
+            OLED_ShowString(0, 4, dacStr);
+            sprintf(dacStr, "Set to %d", DAC7311_FULL_SCALE);
+            OLED_ShowString(0, 6, dacStr);
+            OLED_Refresh();  // 刷新显示
+            
+            printf("[DAC] 输出已设置为满量程: %d\r\n", DAC7311_FULL_SCALE);
           }
           LED_UpdateState(SYSTEM_ERROR);  // 保持错误状态的LED显示
         }

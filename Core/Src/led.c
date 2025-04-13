@@ -101,8 +101,8 @@ void LED_UpdateState(SystemState_t state)
             break;
 
         case SYSTEM_ERROR:  // 系统错误状态
-            // LED1闪烁（间隔500ms）
-            if (currentTime - lastLED1ToggleTime >= 500)  // 每500ms切换一次状态
+            // LED1闪烁（间隔200ms）
+            if (currentTime - lastLED1ToggleTime >= 200)  // 每200ms切换一次状态
             {
                 LED_Toggle(LED1_GPIO_PORT, LED1_PIN);  // 切换LED1状态
                 lastLED1ToggleTime = currentTime;  // 更新最后切换时间

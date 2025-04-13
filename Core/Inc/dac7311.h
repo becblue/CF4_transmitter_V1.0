@@ -51,6 +51,11 @@ extern "C" {
 // 兼容性定义
 #define DAC7311_POWER_NORMAL          DAC7311_POWER_DOWN_NORMAL  // 兼容旧代码
 
+// DAC7311相关定义
+#define DAC7311_FULL_SCALE      4095    // DAC满量程值（12位DAC，最大值为4095）
+#define DAC7311_RAMP_STEP       100     // DAC渐变步进值
+#define DAC7311_RAMP_DELAY      10      // 每次渐变的延时(ms)
+
 /* 鍑芥暟澹版槑 ------------------------------------------------------------------*/
 /**
   * @brief  DAC7311鍒濆鍖?
@@ -89,6 +94,8 @@ uint8_t DAC7311_SetVoltage(float voltage, float vref);
 
 void DAC7311_PowerDown(void);                // 进入掉电模式
 void DAC7311_PowerUp(void);                  // 退出掉电模式
+
+void DAC7311_RampToValue(uint16_t targetValue);                // 使用渐变方式设置DAC输出值
 
 #ifdef __cplusplus
 }

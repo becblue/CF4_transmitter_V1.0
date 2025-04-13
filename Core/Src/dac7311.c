@@ -19,6 +19,7 @@
 
 /* 私有变量定义 */
 static uint8_t dac_initialized = 0;  // DAC初始化标志
+static uint16_t lastValue = 0;       // 记录DAC最后设置的值
 
 // 用于调试输出的宏定义
 #define DEBUG_DAC7311 0  // 设置为1启用调试输出，设置为0禁用
@@ -100,6 +101,8 @@ uint8_t DAC7311_SetValue(uint16_t value)
     // 等待DAC更新完成
     DAC7311_DelayNs(8000);  // 转换时间 ≈ 8μs
     DAC_DEBUG("DAC更新完成，输出值设置为: %d", value);
+    
+    lastValue = value;  // 记录最后设置的值
     
     return 0;
 }
@@ -232,6 +235,48 @@ uint8_t DAC7311_SetVoltage(float voltage, float vref)
     
     /* 设置DAC值 */
     return DAC7311_SetValue(dac_value);
+}
+
+/**
+  * @brief  使用渐变方式设置DAC输出值
+  * @param  targetValue: 目标输出值（0-4095）
+  * @retval 无
+  */
+void DAC7311_RampToValue(uint16_t targetValue)
+{
+    uint16_t currentValue = lastValue;  // 获取当前DAC输出值
+    
+    // 如果目标值大于当前值，逐渐增加
+    if (targetValue > currentValue)
+    {
+        while (currentValue < targetValue)
+        {
+            currentValue += DAC7311_RAMP_STEP;  // 按步进值增加
+            if (currentValue > targetValue)
+            {
+                currentValue = targetValue;  // 确保不超过目标值
+            }
+            DAC7311_SetValue(currentValue);  // 设置新的输出值
+            HAL_Delay(DAC7311_RAMP_DELAY);   // 短暂延时
+        }
+    }
+    // 如果目标值小于当前值，逐渐减小
+    else if (targetValue < currentValue)
+    {
+        while (currentValue > targetValue)
+        {
+            if (currentValue > DAC7311_RAMP_STEP)
+            {
+                currentValue -= DAC7311_RAMP_STEP;  // 按步进值减小
+            }
+            else
+            {
+                currentValue = targetValue;  // 确保不会出现负值
+            }
+            DAC7311_SetValue(currentValue);  // 设置新的输出值
+            HAL_Delay(DAC7311_RAMP_DELAY);   // 短暂延时
+        }
+    }
 }
 
 
