@@ -1,12 +1,18 @@
 /**
   ******************************************************************************
   * @file    dac7311.c
-  * @brief   DAC7311 驱动源文件
-  *          该文件提供了DAC7311 12位数模转换器的控制功能实现
+  * @brief   AD5621BK 驱动源文件
+  *          该文件提供了AD5621BK 12位数模转换器的控制功能实现
   ******************************************************************************
   * @attention
   *
-  * DAC7311是一个12位数字-模拟转换器，使用GPIO模拟时序控制
+  * AD5621BK是一个12位数字-模拟转换器，使用GPIO模拟时序控制
+  * 时序要求：
+  * - 最大时钟频率：50MHz
+  * - 数据建立时间(tDS)：最小10ns
+  * - 数据保持时间(tDH)：最小10ns
+  * - SYNC低电平持续时间：最小12.5ns
+  * - SYNC高电平持续时间：最小12.5ns
   *
   ******************************************************************************
   */
@@ -22,10 +28,10 @@ static uint8_t dac_initialized = 0;  // DAC初始化标志
 static uint16_t lastValue = 0;       // 记录DAC最后设置的值
 
 // 用于调试输出的宏定义
-#define DEBUG_DAC7311 0  // 设置为1启用调试输出，设置为0禁用
+#define DEBUG_DAC 0  // 设置为1启用调试输出，设置为0禁用
 
-#if DEBUG_DAC7311
-#define DAC_DEBUG(format, ...) printf("[DAC7311] " format "\r\n", ##__VA_ARGS__)
+#if DEBUG_DAC
+#define DAC_DEBUG(format, ...) printf("[AD5621BK] " format "\r\n", ##__VA_ARGS__)
 #else
 #define DAC_DEBUG(format, ...)
 #endif
@@ -36,7 +42,7 @@ static void DAC7311_Delay(void);                    // 简单延时
 static void DAC7311_DelayNs(uint32_t ns);          // 基于系统时钟的精确延时
 
 /**
-  * @brief  初始化DAC7311
+  * @brief  初始化AD5621BK
   * @retval 0: 成功, 1: 失败
   */
 uint8_t DAC7311_Init(void)
@@ -165,7 +171,7 @@ static uint8_t DAC7311_Write16Bits(uint16_t data)
             DAC_DEBUG("位%2d: DIN=0 [CLK=L]", 15-i);
         }
         
-        DAC7311_DelayNs(5);   // tDS ≥ 5ns（数据建立时间）
+        DAC7311_DelayNs(10);   // tDS ≥ 10ns（数据建立时间）
         
         DAC_CLK_HIGH();       // CLK上升沿，锁存数据
         DAC_DEBUG("CLK上升沿 -> 锁存数据");

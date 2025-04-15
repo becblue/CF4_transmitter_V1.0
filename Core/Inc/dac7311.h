@@ -1,12 +1,12 @@
 /**
   ******************************************************************************
   * @file    dac7311.h
-  * @brief   DAC7311鏁版ā杞崲鍣ㄩ┍鍔ㄥご鏂囦欢
+  * @brief   AD5621BK数模转换器驱动头文件
   ******************************************************************************
   * @attention
   *
-  * 鏈枃浠跺寘鍚墍鏈塂AC7311鎺у埗鐩稿叧鐨勫嚱鏁板拰瀹忓畾涔?
-  * DAC7311鏄竴涓?12浣嶆暟妯¤浆鎹㈠櫒锛岄�氳繃SPI鎺ュ彛鎺у埗
+  * 本文件包含所有AD5621BK控制相关的函数和宏定义
+  * AD5621BK是一个12位数模转换器，通过SPI接口控制
   * 
   ******************************************************************************
   */
@@ -37,26 +37,32 @@ extern "C" {
 #define DAC_SYNC_LOW()   HAL_GPIO_WritePin(DAC_GPIO_PORT, DAC_SYNC_PIN, GPIO_PIN_RESET)  // SYNC置低
 
 /* 宏定义 --------------------------------------------------------------------*/
-// DAC7311电源模式定义
-#define DAC7311_POWER_DOWN_NORMAL     0x00    // 正常工作模式
-#define DAC7311_POWER_DOWN_1K         0x01    // 1K下拉关断
-#define DAC7311_POWER_DOWN_100K       0x02    // 100K下拉关断
-#define DAC7311_POWER_DOWN_HI_Z       0x03    // 高阻态
+// AD5621BK电源模式定义
+#define AD5621BK_POWER_DOWN_NORMAL     0x00    // 正常工作模式
+#define AD5621BK_POWER_DOWN_1K         0x01    // 1K下拉关断
+#define AD5621BK_POWER_DOWN_100K       0x02    // 100K下拉关断
+#define AD5621BK_POWER_DOWN_HI_Z       0x03    // 高阻态
 
-// DAC7311命令定义
-#define DAC7311_CMD_WRITE_UPDATE_DAC  0x03    // 写入并更新DAC寄存器
-#define DAC7311_CMD_MASK              0x03    // 命令掩码 (Bit 4-5)
-#define DAC7311_PD_MASK               0x0C    // 电源模式掩码 (Bit 2-3)
+// AD5621BK命令定义
+#define AD5621BK_CMD_WRITE_UPDATE_DAC  0x03    // 写入并更新DAC寄存器
+#define AD5621BK_CMD_MASK              0x03    // 命令掩码 (Bit 4-5)
+#define AD5621BK_PD_MASK              0x0C    // 电源模式掩码 (Bit 2-3)
 
-// 兼容性定义
-#define DAC7311_POWER_NORMAL          DAC7311_POWER_DOWN_NORMAL  // 兼容旧代码
+// 兼容性定义（保持与旧代码兼容）
+#define DAC7311_POWER_DOWN_NORMAL      AD5621BK_POWER_DOWN_NORMAL
+#define DAC7311_POWER_DOWN_1K          AD5621BK_POWER_DOWN_1K
+#define DAC7311_POWER_DOWN_100K        AD5621BK_POWER_DOWN_100K
+#define DAC7311_POWER_DOWN_HI_Z        AD5621BK_POWER_DOWN_HI_Z
+#define DAC7311_CMD_WRITE_UPDATE_DAC   AD5621BK_CMD_WRITE_UPDATE_DAC
+#define DAC7311_CMD_MASK               AD5621BK_CMD_MASK
+#define DAC7311_PD_MASK               AD5621BK_PD_MASK
 
-// DAC7311相关定义
-#define DAC7311_FULL_SCALE      4095    // DAC满量程值（12位DAC，最大值为4095）
-#define DAC7311_RAMP_STEP       100     // DAC渐变步进值
-#define DAC7311_RAMP_DELAY      10      // 每次渐变的延时(ms)
+// DAC相关定义
+#define DAC_FULL_SCALE      4095    // DAC满量程值（12位DAC，最大值为4095）
+#define DAC_RAMP_STEP       100     // DAC渐变步进值
+#define DAC_RAMP_DELAY      10      // 每次渐变的延时(ms)
 
-/* 鍑芥暟澹版槑 ------------------------------------------------------------------*/
+/* 函数声明 ------------------------------------------------------------------*/
 /**
   * @brief  DAC7311鍒濆鍖?
   * @param  hspi: SPI閫氫俊鍙ユ焺鎸囬拡
