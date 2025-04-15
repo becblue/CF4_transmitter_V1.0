@@ -7,12 +7,12 @@
 
 /* 缓冲区大小定义 */
 #define SENSOR_BUFFER_SIZE     32      // 通信缓冲区大小
+#define SENSOR_ZERO_POINT      0       // 定义零点常数为0
 
 /* 传感器数据结构体定义 */
 typedef struct {
     uint16_t concentration;    // 浓度值
     uint32_t rangeValue;      // 量程值（32位）
-    uint16_t zeroPoint;       // 零点值
     uint16_t outputValue;     // 输出值(0-4095)
     float outputVoltage;      // 输出电压(0-3.3V)
     float outputCurrent;      // 输出电流(4-20mA)
@@ -23,7 +23,7 @@ uint8_t Sensor_Init(void);
 uint16_t Sensor_GetConcentration(void);
 uint32_t Sensor_GetRange(void);  // 修改返回值为32位
 uint16_t Sensor_GetZeroPoint(void);
-uint16_t Sensor_CalculateOutput(uint16_t concentration, uint16_t zeroPoint, uint32_t rangeValue);  // 修改参数类型
+uint16_t Sensor_CalculateOutput(uint16_t concentration, uint32_t rangeValue);  // 移除zeroPoint参数
 float Sensor_CalculateVoltage(uint16_t value);
 float Sensor_CalculateCurrent(uint16_t value);
 uint8_t Sensor_UpdateAllData(SensorData_t *data);

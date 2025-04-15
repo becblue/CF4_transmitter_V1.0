@@ -248,8 +248,8 @@ int main(void)
     OLED_ShowString(0, 2, buf);
     
     // 显示零点值
-    sprintf(buf, "Zero:%d", sensorData.zeroPoint);
-    OLED_ShowString(0, 4, buf);
+    sprintf(buf, "Zero:%d", SENSOR_ZERO_POINT);
+    OLED_ShowString(0, 3, buf);
     
     // 显示DAC输出值
     sprintf(buf, "DAC:%d/4095", sensorData.outputValue);
@@ -469,8 +469,8 @@ static void UpdateDisplay(SensorData_t *data)
     OLED_ShowString(0, 2, buf);
     
     // 显示零点值
-    sprintf(buf, "Zero:%d", data->zeroPoint);
-    OLED_ShowString(0, 4, buf);
+    sprintf(buf, "Zero:%d", SENSOR_ZERO_POINT);
+    OLED_ShowString(0, 3, buf);
     
     // 显示DAC输出值
     sprintf(buf, "DAC:%d/4095", data->outputValue);

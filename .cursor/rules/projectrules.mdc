@@ -8,6 +8,7 @@ alwaysApply: true
 1、所有代码的编写，每一行代码后都需要加上通俗易懂的中文注释，通俗到让不懂代码的人也能看懂这行代码的作用的水平
 2、不要随意改动README文件内容，除非我明确要求改动才可以
 3、不需要频繁更新GIT仓库和远程仓库，如果需要更新，我会在需要更新的时候明确和你说明需要更新
+4、在所有编码中，禁止使用SPI通讯
 
 - You can @ files here
 - You can use markdown but dont have to

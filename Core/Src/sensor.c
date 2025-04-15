@@ -76,7 +76,7 @@ static uint8_t Sensor_IsValueValid(uint32_t value, uint8_t cmd);
 uint8_t Sensor_Init(void)
 {
   // 延时一段时间等待传感器上电稳定
-  HAL_Delay(1000);  // 等待传感器上电稳定
+  HAL_Delay(2000);  // 等待传感器上电稳定
   
   // 清空接收缓冲区
   memset(rxBuffer, 0, SENSOR_BUFFER_SIZE);  // 清空接收缓冲区
@@ -84,9 +84,7 @@ uint8_t Sensor_Init(void)
   // 清除错误代码
   lastError = SENSOR_ERROR_NONE;  // 清除上次的错误代码
   
-  // 尝试获取传感器零点值和量程值
-  uint16_t zeroPoint = Sensor_GetZeroPoint();  // 获取零点值
-  HAL_Delay(100);  // 短暂延时，避免连续通信
+  // 获取传感器量程值
   uint32_t rangeValue = Sensor_GetRange();  // 获取量程值
   
   // 检查量程值是否有效
@@ -96,7 +94,6 @@ uint8_t Sensor_Init(void)
   }
   
   // 更新传感器数据结构体
-  sensorData.zeroPoint = zeroPoint;  // 保存零点值
   sensorData.rangeValue = rangeValue;  // 保存量程值
   sensorData.concentration = 0;  // 初始浓度值为0
   sensorData.outputValue = 0;  // 初始输出值为0
@@ -177,57 +174,32 @@ uint32_t Sensor_GetRange(void)
 
 /**
   * @brief  获取传感器零点值
-  * @retval 零点值，失败则返回0xFFFF
+  * @retval 零点值（固定为0）
   */
 uint16_t Sensor_GetZeroPoint(void)
 {
-  uint8_t retry = 0;  // 重试计数器
-  uint16_t zeroPoint;  // 零点值
-  
-  // 使用重试机制读取零点值
-  while (retry < SENSOR_MAX_RETRY) {
-    // 发送读取零点命令
-    if (Sensor_SendCommand(SENSOR_CMD_READ_ZERO, NULL, 0) == 0) {
-      // 解析响应数据
-      zeroPoint = Sensor_ParseResponse();
-      
-      // 检查数据有效性
-      if (zeroPoint != 0xFFFF && Sensor_IsValueValid(zeroPoint, SENSOR_CMD_READ_ZERO)) {
-        // 更新传感器数据结构体
-        sensorData.zeroPoint = zeroPoint;
-        lastError = SENSOR_ERROR_NONE;  // 清除错误状态
-        return zeroPoint;  // 获取成功，返回零点值
-      }
-    }
-    
-    retry++;  // 增加重试计数
-    HAL_Delay(SENSOR_RETRY_DELAY);  // 延时一段时间后重试
-  }
-  
-  // 全部重试失败，返回错误值
-  return 0xFFFF;  // 读取失败
+  return SENSOR_ZERO_POINT;  // 直接返回零点常量值
 }
 
 /**
   * @brief  计算传感器输出值
   * @param  concentration: 当前浓度值
-  * @param  zeroPoint: 零点值
   * @param  rangeValue: 量程值
   * @retval 输出值(0-4095)
   */
-uint16_t Sensor_CalculateOutput(uint16_t concentration, uint16_t zeroPoint, uint32_t rangeValue)
+uint16_t Sensor_CalculateOutput(uint16_t concentration, uint32_t rangeValue)
 {
   // 防止除零错误
-  if (rangeValue <= zeroPoint) {
+  if (rangeValue == 0) {
     return 0;  // 参数无效，返回0
   }
   
   // 计算输出值 (线性映射浓度值到0-4095范围)
   uint32_t output;  // 使用32位变量避免计算溢出
   
-  // 如果浓度小于零点，输出为0
-  if (concentration <= zeroPoint) {
-    output = 0;  // 浓度小于零点，输出最小值
+  // 如果浓度小于等于零点（0），输出为0
+  if (concentration <= SENSOR_ZERO_POINT) {
+    output = 0;  // 浓度小于等于零点，输出最小值
   }
   // 如果浓度大于量程，输出为最大值
   else if (concentration >= rangeValue) {
@@ -236,8 +208,8 @@ uint16_t Sensor_CalculateOutput(uint16_t concentration, uint16_t zeroPoint, uint
   // 否则线性映射
   else {
     // 使用64位计算避免溢出，并提高精度
-    uint64_t temp = (uint64_t)(concentration - zeroPoint) * 4096;  // 使用4096提高精度
-    output = (uint32_t)((temp + ((rangeValue - zeroPoint) >> 1)) / (rangeValue - zeroPoint));  // 加上半个除数实现四舍五入
+    uint64_t temp = (uint64_t)(concentration - SENSOR_ZERO_POINT) * 4096;  // 使用4096提高精度
+    output = (uint32_t)((temp + (rangeValue >> 1)) / rangeValue);  // 加上半个除数实现四舍五入
     
     // 确保输出值在有效范围内
     if (output > 4095) {
@@ -247,7 +219,7 @@ uint16_t Sensor_CalculateOutput(uint16_t concentration, uint16_t zeroPoint, uint
   
   // 打印调试信息
   printf("[调试] 计算输出值: 浓度=%u, 零点=%u, 量程=%u, 输出值=%u\r\n", 
-         concentration, zeroPoint, (uint32_t)rangeValue, output);
+         concentration, SENSOR_ZERO_POINT, (uint32_t)rangeValue, output);
   
   return (uint16_t)output;  // 返回计算后的输出值
 }
@@ -307,8 +279,7 @@ uint8_t Sensor_UpdateAllData(SensorData_t *data)
   // 计算输出值
   uint16_t outputValue = Sensor_CalculateOutput(
     concentration,             // 当前浓度值
-    sensorData.zeroPoint,      // 使用保存的零点值
-    sensorData.rangeValue      // 使用保存的量程值
+    sensorData.rangeValue     // 使用保存的量程值
   );
   
   // 计算输出电压和电流
@@ -317,9 +288,9 @@ uint8_t Sensor_UpdateAllData(SensorData_t *data)
   
   // 更新传感器数据结构体
   sensorData.concentration = concentration;  // 更新浓度值
-  sensorData.outputValue = outputValue;      // 更新输出值
-  sensorData.outputVoltage = outputVoltage;  // 更新电压值
-  sensorData.outputCurrent = outputCurrent;  // 更新电流值
+  sensorData.outputValue = outputValue;     // 更新输出值
+  sensorData.outputVoltage = outputVoltage; // 更新电压值
+  sensorData.outputCurrent = outputCurrent; // 更新电流值
   
   // 如果提供了外部结构体指针，则复制数据
   if (data != NULL) {
