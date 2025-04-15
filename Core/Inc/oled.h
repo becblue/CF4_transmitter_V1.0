@@ -55,9 +55,11 @@ extern "C" {
   * @brief  脏区标记结构体
   */
 typedef struct {
-    uint8_t isDirty[DIRTY_BLOCK_NUM];          // 页脏标记
-    uint8_t displayBuffer[OLED_PAGE_NUM][128]; // 显示缓冲区
+    uint8_t displayBuffer[8][128];  // 显示缓冲区，8页，每页128列
+    uint8_t isDirty[8];            // 每页的更新标志
 } OLED_DirtyFlag_t;
+
+extern OLED_DirtyFlag_t oledDirtyFlag;  // 声明为外部变量
 
 /* 函数声明 ------------------------------------------------------------------*/
 /**

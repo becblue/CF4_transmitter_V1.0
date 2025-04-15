@@ -460,21 +460,21 @@ static void UpdateDisplay(SensorData_t *data)
     OLED_Clear();  // 清除显示
     char buf[32];   // 显示缓冲区
     
-    // 显示浓度值
-    sprintf(buf, "PPM:%d", data->concentration);
-    OLED_ShowString(0, 0, buf);
+    // 显示PPM值（大字体）
+    sprintf(buf, "PPM:%d", data->concentration);  // 格式化PPM值
+    OLED_ShowString(0, 0, buf);  // 在第0行显示PPM值
     
-    // 显示量程值
-    sprintf(buf, "Range:%d", data->rangeValue);
-    OLED_ShowString(0, 2, buf);
+    // 显示DAC值
+    sprintf(buf, "DAC:%d", data->outputValue);  // 格式化DAC值
+    OLED_ShowString(0, 2, buf);  // 在第2行显示DAC值
     
-    // 显示零点值
-    sprintf(buf, "Zero:%d", SENSOR_ZERO_POINT);
-    OLED_ShowString(0, 3, buf);
+    // 显示电压值
+    sprintf(buf, "V:%.2fV", data->outputVoltage);  // 格式化电压值
+    OLED_ShowString(0, 4, buf);  // 在第4行显示电压值
     
-    // 显示DAC输出值
-    sprintf(buf, "DAC:%d/4095", data->outputValue);
-    OLED_ShowString(0, 6, buf);
+    // 显示电流值
+    sprintf(buf, "I:%.2fmA", data->outputCurrent);  // 格式化电流值
+    OLED_ShowString(0, 6, buf);  // 在第6行显示电流值
     
     OLED_Refresh();  // 刷新显示
 }

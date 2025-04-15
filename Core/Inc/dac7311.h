@@ -62,6 +62,11 @@ extern "C" {
 #define DAC_RAMP_STEP       100     // DAC渐变步进值
 #define DAC_RAMP_DELAY      10      // 每次渐变的延时(ms)
 
+/* DAC7311相关宏定义 */
+#define DAC7311_FULL_SCALE    4095    // DAC满量程值（12位DAC，最大值为4095）
+#define DAC7311_RAMP_STEP     100     // DAC渐变步进值
+#define DAC7311_RAMP_DELAY    10      // DAC渐变延时(ms)
+
 /* 函数声明 ------------------------------------------------------------------*/
 /**
   * @brief  DAC7311鍒濆鍖?
