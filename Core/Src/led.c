@@ -127,11 +127,9 @@ void LED_HandleDAC7311Update(void)
         return;
     }
 
-    uint32_t currentTime = HAL_GetTick();  // 获取当前系统时间
-    
     /* DAC7311更新后，LED2点亮200ms */
     LED_SetState(LED2_GPIO_PORT, LED2_PIN, LED_ON);  // 点亮LED2
-    lastLED2OnTime = currentTime;         // 记录LED2点亮时间
+    lastLED2OnTime = HAL_GetTick();         // 记录LED2点亮时间
     isLED2UpdateActive = 1;               // 设置更新活动标志
 } 
 

@@ -4,10 +4,15 @@
 #include <stdint.h>  // 添加标准整数类型定义
 #include "main.h"    // 包含STM32相关定义
 #include <stdio.h>   // 添加标准输入输出定义
+#include "led.h"  // 添加LED控制头文件
 
 /* 缓冲区大小定义 */
 #define SENSOR_BUFFER_SIZE     32      // 通信缓冲区大小
 #define SENSOR_ZERO_POINT      0       // 定义零点常数为0
+
+/* 通讯丢失相关定义 */
+#define COMM_LOST_MAX_COUNT     3        // 通讯丢失最大次数（3次，约3秒）
+#define COMM_LOST_DAC_VALUE     3649     // 通讯丢失时DAC输出值（对应20mA）
 
 /* 传感器数据结构体定义 */
 typedef struct {

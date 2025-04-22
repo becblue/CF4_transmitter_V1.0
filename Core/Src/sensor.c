@@ -57,9 +57,10 @@
 
 /* 私有变量 ------------------------------------------------------------------*/
 static uint8_t rxBuffer[SENSOR_BUFFER_SIZE];  // 接收缓冲区
-static SensorData_t sensorData = {0};         // 传感器数据结构体
 static uint8_t isInitialized = 0;             // 初始化标志
 static uint8_t lastError = SENSOR_ERROR_NONE; // 最后一次错误代码
+static uint8_t commLostCount = 0;             // 通讯丢失计数器
+static uint32_t currentRangeValue = 0;        // 当前量程值
 
 /* 私有函数原型 --------------------------------------------------------------*/
 static uint8_t Sensor_SendCommand(uint8_t cmd, uint8_t *data, uint8_t dataLen);
@@ -75,30 +76,24 @@ static uint8_t Sensor_IsValueValid(uint32_t value, uint8_t cmd);
   */
 uint8_t Sensor_Init(void)
 {
-  // 延时一段时间等待传感器上电稳定
-  HAL_Delay(2000);  // 等待传感器上电稳定
+  // 等待传感器上电稳定
+  HAL_Delay(3000);  // 修改为3秒，与系统预热时间配合，总计10秒预热时间
   
   // 清空接收缓冲区
   memset(rxBuffer, 0, SENSOR_BUFFER_SIZE);  // 清空接收缓冲区
   
   // 清除错误代码
   lastError = SENSOR_ERROR_NONE;  // 清除上次的错误代码
+  commLostCount = 0;             // 清零通讯失败计数
   
   // 获取传感器量程值
-  uint32_t rangeValue = Sensor_GetRange();  // 获取量程值
+  currentRangeValue = Sensor_GetRange();  // 获取量程值
   
   // 检查量程值是否有效
-  if (rangeValue == 0) {  // 只有0是无效值
+  if (currentRangeValue == 0) {  // 只有0是无效值
     lastError = SENSOR_ERROR_VALUE;  // 记录参数错误
     return 1;  // 初始化失败，量程值无效
   }
-  
-  // 更新传感器数据结构体
-  sensorData.rangeValue = rangeValue;  // 保存量程值
-  sensorData.concentration = 0;  // 初始浓度值为0
-  sensorData.outputValue = 0;  // 初始输出值为0
-  sensorData.outputVoltage = 0.0f;  // 初始电压为0V
-  sensorData.outputCurrent = 4.0f;  // 初始电流为4mA(最小输出)
   
   // 设置初始化标志
   isInitialized = 1;  // 标记初始化完成
@@ -124,9 +119,6 @@ uint16_t Sensor_GetConcentration(void)
       
       // 检查数据有效性
       if (concentration != 0xFFFF && Sensor_IsValueValid(concentration, SENSOR_CMD_READ_CONC)) {
-        // 更新传感器数据结构体
-        sensorData.concentration = concentration;
-        lastError = SENSOR_ERROR_NONE;  // 清除错误状态
         return concentration;  // 获取成功，返回浓度值
       }
     }
@@ -157,9 +149,6 @@ uint32_t Sensor_GetRange(void)
       
       // 检查数据有效性（只要不是0就是有效的）
       if (Sensor_IsValueValid(rangeValue, SENSOR_CMD_READ_RANGE)) {
-        // 更新传感器数据结构体
-        sensorData.rangeValue = rangeValue;
-        lastError = SENSOR_ERROR_NONE;  // 清除错误状态
         return rangeValue;  // 获取成功，返回量程值
       }
     }
@@ -185,43 +174,34 @@ uint16_t Sensor_GetZeroPoint(void)
   * @brief  计算传感器输出值
   * @param  concentration: 当前浓度值
   * @param  rangeValue: 量程值
-  * @retval 输出值(0-4095)
+  * @retval 输出值(729-3649)
   */
 uint16_t Sensor_CalculateOutput(uint16_t concentration, uint32_t rangeValue)
 {
   // 防止除零错误
   if (rangeValue == 0) {
-    return 0;  // 参数无效，返回0
+    return 729;  // 参数无效，返回对应4mA的DAC值
   }
   
-  // 计算输出值 (线性映射浓度值到0-4095范围)
+  // 计算输出值 (线性映射浓度值到729-3649范围)
   uint32_t output;  // 使用32位变量避免计算溢出
   
-  // 如果浓度小于等于零点（0），输出为0
+  // 如果浓度小于等于零点（0），输出为最小值
   if (concentration <= SENSOR_ZERO_POINT) {
-    output = 0;  // 浓度小于等于零点，输出最小值
+    output = 729;  // 对应4mA的DAC值
   }
-  // 如果浓度大于量程，输出为最大值
+  // 如果浓度大于等于量程值，输出为最大值
   else if (concentration >= rangeValue) {
-    output = 4095;  // 浓度大于量程，输出最大值
+    output = 3649;  // 对应20mA的DAC值
   }
-  // 否则线性映射
+  // 否则进行线性映射
   else {
-    // 使用64位计算避免溢出，并提高精度
-    uint64_t temp = (uint64_t)(concentration - SENSOR_ZERO_POINT) * 4096;  // 使用4096提高精度
-    output = (uint32_t)((temp + (rangeValue >> 1)) / rangeValue);  // 加上半个除数实现四舍五入
-    
-    // 确保输出值在有效范围内
-    if (output > 4095) {
-      output = 4095;  // 限制最大输出值
-    }
+    // 使用32位计算避免溢出
+    // 映射公式：output = 729 + (concentration * (3649 - 729)) / rangeValue
+    output = 729 + (concentration * (uint32_t)(3649 - 729)) / rangeValue;
   }
   
-  // 打印调试信息
-  printf("[调试] 计算输出值: 浓度=%u, 零点=%u, 量程=%u, 输出值=%u\r\n", 
-         concentration, SENSOR_ZERO_POINT, (uint32_t)rangeValue, output);
-  
-  return (uint16_t)output;  // 返回计算后的输出值
+  return (uint16_t)output;  // 返回计算结果
 }
 
 /**
@@ -260,47 +240,64 @@ float Sensor_CalculateCurrent(uint16_t value)
 
 /**
   * @brief  更新所有传感器数据
-  * @param  data: 传感器数据结构体指针
-  * @retval 更新结果: 0-成功, 1-失败
+  * @param  sensorData: 传感器数据结构体指针
+  * @retval 0:成功, 非0:失败
   */
-uint8_t Sensor_UpdateAllData(SensorData_t *data)
+uint8_t Sensor_UpdateAllData(SensorData_t* sensorData)
 {
-  if (!isInitialized) {
-    lastError = SENSOR_ERROR_VALUE;  // 设置错误代码
-    return 1;  // 未初始化，返回错误
-  }
-  
-  // 获取传感器浓度值
-  uint16_t concentration = Sensor_GetConcentration();
-  if (concentration == 0xFFFF) {
-    return 1;  // 获取浓度失败
-  }
-  
-  // 计算输出值
-  uint16_t outputValue = Sensor_CalculateOutput(
-    concentration,             // 当前浓度值
-    sensorData.rangeValue     // 使用保存的量程值
-  );
-  
-  // 计算输出电压和电流
-  float outputVoltage = Sensor_CalculateVoltage(outputValue);  // 计算对应电压
-  float outputCurrent = Sensor_CalculateCurrent(outputValue);  // 计算对应电流
-  
-  // 更新传感器数据结构体
-  sensorData.concentration = concentration;  // 更新浓度值
-  sensorData.outputValue = outputValue;     // 更新输出值
-  sensorData.outputVoltage = outputVoltage; // 更新电压值
-  sensorData.outputCurrent = outputCurrent; // 更新电流值
-  
-  // 如果提供了外部结构体指针，则复制数据
-  if (data != NULL) {
-    memcpy(data, &sensorData, sizeof(SensorData_t));  // 复制数据到外部结构体
-  }
-  
-  // 设置DAC输出
-  Sensor_SetOutput(outputValue);  // 更新DAC输出
-  
-  return 0;  // 更新成功
+    uint8_t result = 0;  // 函数返回值
+    uint16_t concentration;  // 浓度值临时变量
+
+    // 检查初始化状态
+    if (!isInitialized) {
+        lastError = SENSOR_ERROR_VALUE;  // 设置错误代码
+        return 1;  // 未初始化，返回错误
+    }
+
+    // 获取浓度值
+    concentration = Sensor_GetConcentration();  // 读取浓度值
+    
+    // 修改判断逻辑：只有在浓度值无效时才认为是通讯失败
+    if (concentration == 0xFFFF)  // 如果读取失败
+    {
+        commLostCount++;  // 通讯失败计数加1
+        printf("[调试] 通讯失败计数: %d\r\n", commLostCount);  // 添加调试信息
+        
+        // 如果连续失败次数达到阈值，设置为最大输出报警
+        if (commLostCount >= COMM_LOST_MAX_COUNT)
+        {
+            printf("[调试] 通讯丢失，设置最大输出报警\r\n");  // 添加调试信息
+            // 设置DAC输出为最大值
+            sensorData->outputValue = COMM_LOST_DAC_VALUE;  // 设置为最大DAC值
+            sensorData->outputVoltage = (float)COMM_LOST_DAC_VALUE * 3.3f / 4095.0f;  // 计算对应电压
+            sensorData->outputCurrent = 4.0f + (sensorData->outputVoltage * 16.0f / 3.3f);  // 计算对应电流
+            
+            // 更新DAC输出
+            Sensor_SetOutput(COMM_LOST_DAC_VALUE);  // 设置DAC输出
+        }
+        result = 1;  // 返回错误状态
+    }
+    else  // 通讯正常
+    {
+        commLostCount = 0;  // 清零通讯失败计数
+        
+        // 更新传感器数据
+        sensorData->concentration = concentration;  // 更新浓度值
+        sensorData->rangeValue = currentRangeValue;  // 使用存储的量程值
+        sensorData->outputValue = Sensor_CalculateOutput(concentration, currentRangeValue);  // 计算输出值
+        sensorData->outputVoltage = (float)sensorData->outputValue * 3.3f / 4095.0f;  // 计算输出电压
+        sensorData->outputCurrent = 4.0f + (sensorData->outputVoltage * 16.0f / 3.3f);  // 计算对应电流
+        
+        // 更新DAC输出
+        Sensor_SetOutput(sensorData->outputValue);  // 设置DAC输出
+        
+        printf("[调试] 通讯正常，浓度值: %d, DAC输出值: %d\r\n", 
+               concentration, sensorData->outputValue);  // 添加调试信息
+        
+        result = 0;  // 返回成功状态
+    }
+
+    return result;  // 返回执行结果
 }
 
 /**
@@ -316,7 +313,9 @@ void Sensor_SetOutput(uint16_t value)
   }
   
   // 使用DAC7311设置输出电压
-  if (DAC7311_SetValue(value) != 0) {
+  if (DAC7311_SetValue(value) == 0) {  // DAC设置成功
+    LED_HandleDAC7311Update();  // 更新LED2状态
+  } else {
     // DAC设置失败时记录错误
     lastError = SENSOR_ERROR_VALUE;  // 记录DAC设置错误
   }

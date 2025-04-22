@@ -72,6 +72,10 @@ uint8_t DAC7311_Init(void)
   * @brief  设置DAC输出值
   * @param  value: 12位DAC值（0-4095）
   * @retval 0: 成功, 1: 失败
+  * @note   帧结构：
+  *         [15:14] PD1,PD0 电源管理位
+  *         [13:02] DAC的12位有效数据
+  *         [01:00] 无用数据（会被忽略）
   */
 uint8_t DAC7311_SetValue(uint16_t value)
 {
@@ -83,7 +87,9 @@ uint8_t DAC7311_SetValue(uint16_t value)
     }
     
     // 构造16位数据帧
-    data = (uint16_t)(value & 0x0FFF);  // 保留低12位
+    data = (uint16_t)((value << 2) & 0x3FFC);  // 将12位数据左移2位到[13:02]位置
+    data |= (AD5621BK_POWER_DOWN_NORMAL << 14); // 设置电源管理位[15:14]为正常工作模式
+    // [01:00]位保持为0，这两位会被忽略
     
     DAC_DEBUG("开始传输数据: 0x%04X (值: %d)", data, value);
     
@@ -119,7 +125,11 @@ uint8_t DAC7311_SetValue(uint16_t value)
   */
 void DAC7311_PowerDown(void)
 {
-    uint16_t data = 0x2000;  // PD1,PD0 = 10 (掉电模式1)
+    uint16_t data;
+    
+    // 构造掉电模式数据帧
+    data = (lastValue << 2) & 0x3FFC;  // 保持最后的DAC值
+    data |= (AD5621BK_POWER_DOWN_1K << 14);  // 设置为1K下拉掉电模式
     
     DAC_SYNC_LOW();
     DAC7311_Delay();
@@ -134,7 +144,11 @@ void DAC7311_PowerDown(void)
   */
 void DAC7311_PowerUp(void)
 {
-    uint16_t data = 0x0000;  // PD1,PD0 = 00 (正常工作模式)
+    uint16_t data;
+    
+    // 构造正常工作模式数据帧
+    data = (lastValue << 2) & 0x3FFC;  // 恢复最后的DAC值
+    data |= (AD5621BK_POWER_DOWN_NORMAL << 14);  // 设置为正常工作模式
     
     DAC_SYNC_LOW();
     DAC7311_Delay();
@@ -226,6 +240,9 @@ static void DAC7311_Delay(void)
   * @param  voltage: 期望输出电压(单位:伏特)
   * @param  vref: 参考电压(单位:伏特)
   * @retval 0: 成功, 1: 失败
+  * @note   电压计算说明：
+  *         - 4mA对应0.588V，需要DAC输出值729
+  *         - 20mA对应2.94V，需要DAC输出值3649
   */
 uint8_t DAC7311_SetVoltage(float voltage, float vref)
 {
@@ -237,7 +254,14 @@ uint8_t DAC7311_SetVoltage(float voltage, float vref)
     }
     
     /* 计算DAC数值 */
-    dac_value = (uint16_t)((voltage * 4095) / vref);
+    if (voltage == 0) {
+        dac_value = 729;  // 对应4mA输出
+    } else if (voltage >= vref) {
+        dac_value = 3649;  // 对应20mA输出
+    } else {
+        // 线性映射到729~3649范围
+        dac_value = 729 + (uint16_t)((voltage * (3649 - 729)) / vref);
+    }
     
     /* 设置DAC值 */
     return DAC7311_SetValue(dac_value);
