@@ -77,7 +77,7 @@ static uint8_t Sensor_IsValueValid(uint32_t value, uint8_t cmd);
 uint8_t Sensor_Init(void)
 {
   // 等待传感器上电稳定
-  HAL_Delay(3000);  // 修改为3秒，与系统预热时间配合，总计10秒预热时间
+  HAL_Delay(3000);  // 修改为3秒预热时间
   
   // 清空接收缓冲区
   memset(rxBuffer, 0, SENSOR_BUFFER_SIZE);  // 清空接收缓冲区

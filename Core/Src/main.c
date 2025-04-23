@@ -40,7 +40,7 @@
 /* USER CODE BEGIN PD */
 #define SENSOR_UPDATE_INTERVAL   500       // 传感器数据更新间隔(ms)
 #define DISPLAY_UPDATE_INTERVAL  1000      // 显示更新间隔(ms)
-#define WARMUP_TIME              10000     // 预热时间(ms)，修改为10秒
+#define WARMUP_TIME              60000     // 预热时间(ms)，修改为60秒
 #define DAC_VREF                 3.3f      // DAC参考电压（3.3V）
 /* USER CODE END PD */
 
